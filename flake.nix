@@ -17,6 +17,7 @@
             pre-commit
             pandoc
             git
+            git-lfs
             cacert
             stdenv
             pastel
