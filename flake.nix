@@ -14,7 +14,6 @@
           buildInputs = [
             poetry
             python38
-            python39
             pre-commit
             pandoc
             git
@@ -23,22 +22,26 @@
             pastel
             zlib
             nixFlakes
+            # conda
+            # hdf5-cpp
+            # pkg-config
           ];
 
           # Required for building C extensions
           LD_LIBRARY_PATH = "${stdenv.cc.cc.lib}/lib:${zlib}/lib";
+          # HDF5_LIBDIR = "${hdf5-cpp}/lib";
+          # HDF5_INCLUDEDIR = "${hdf5-cpp.dev.outPath}/include";
           # Certificates for secure connections for e.g. pip downloads
           GIT_SSL_CAINFO = "${cacert}/etc/ssl/certs/ca-bundle.crt";
           SSL_CERT_FILE = "${cacert}/etc/ssl/certs/ca-bundle.crt";
           CURL_CA_BUNDLE = "${cacert}/etc/ssl/certs/ca-bundle.crt";
           # Required to fully use the python environments
-          PYTHON38PATH = "${python38}/lib/python3.8/site-packages";
+          # PYTHON38PATH = "${python38}/lib/python3.8/site-packages";
           # PYTHONPATH is overridden with contents from e.g. poetry */site-package.
           # We do not want them to be in PYTHONPATH.
           # Therefore, in ./.envrc PYTHONPATH is set to the _PYTHONPATH defined below
           # and also in shellHooks (direnv does not load shellHook exports, always).
-          _PYTHONPATH =
-            "${PYTHON38PATH}:${python39}/lib/python3.9/site-packages";
+          _PYTHONPATH = "${python38}/lib/python3.8/site-packages";
 
           envrc_contents = ''
             use flake

@@ -170,3 +170,6 @@ docs_src/auto_examples/
 .direnv
 .envrc
 .direnv
+unet_weights.hdf5
+history.csv
+Training/
