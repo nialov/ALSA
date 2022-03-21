@@ -12,6 +12,9 @@ jobs:
       matrix:
         platform: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
@@ -20,8 +23,8 @@ jobs:
           environment-file: environment.yml
           python-version: 3.8
       - run: |
-        python -c 'import alsa'
-        pytest --disable-warnings --doctest-modules
+          python -c 'import alsa'
+          pytest --disable-warnings --doctest-modules
   lint:
     name: Lint 🐍 code
     runs-on: windows-latest
