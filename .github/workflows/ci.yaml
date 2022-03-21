@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows-latest]
+        platform: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     defaults:
       run:
@@ -23,8 +23,14 @@ jobs:
           activate-environment: alsa
           environment-file: environment.yml
           python-version: 3.8
-      - run: |
+      - name: Print installed conda environment on ${{ matrix.platform }}
+        run: |
+          conda info
+      - name: Import test
+        run: |
           python -c 'import alsa'
+      - name: Run unit tests with pytest
+        run: |
           pytest --disable-warnings --doctest-modules
   lint:
     name: Lint 🐍 code
