@@ -1,0 +1,31 @@
+name: ci
+
+on:
+  # run on all pushes to any branch
+  push:
+
+jobs:
+  pytest:
+    name: Test 🐍 code
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: alsa
+          environment-file: environment.yml
+          python-version: 3.8
+      - run: |
+        python -c 'import alsa'
+        pytest --disable-warnings --doctest-modules
+  lint:
+    name: Lint 🐍 code
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: pre-commit/action@v2.0.3

@@ -1,6 +1,8 @@
 """
 Tests for crack_main.py.
 """
+from warnings import warn
+
 import geopandas as gpd
 from shapely.geometry import LineString, MultiLineString
 
@@ -13,6 +15,9 @@ def test_crack_main(tmp_path):
     Test crack_main.
     """
     traces_path = tmp_path / "test_crack_main_traces.shp"
+    if not tests.KL5_TEST_WEIGHTS.exists():
+        warn("Skipping test_crack_main as weights are missing.")
+        return
     nworks, orig_dims, geo_data, result_gdf = crack_main.crack_main(
         work_dir=tmp_path,
         img_path=tests.KL5_TEST_IMAGE,
