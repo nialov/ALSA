@@ -1,0 +1,3 @@
+[flake8]
+max-line-length = 120
+ignore = D200,W503,D205,D400,D211,E203,D101,D102,D105,E501,D103,D107,E741
