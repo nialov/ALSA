@@ -3,7 +3,7 @@ Geometry and GIS related utilities.
 """
 import os
 
-import geopandas
+import geopandas as gpd
 import numpy as np
 
 from alsa.crack_maths import line_point_generator, linear_converter
@@ -11,7 +11,7 @@ from alsa.crack_maths import line_point_generator, linear_converter
 
 # Returns GeoDataFrame from shapely file in geo_path
 def geo_data(geo_path):
-    return geopandas.GeoDataFrame.from_file(geo_path)
+    return gpd.GeoDataFrame.from_file(geo_path)
 
 
 def to_shp(gdf, file_path=None):
@@ -25,7 +25,6 @@ def geo_dataframe_to_list(data_frame, polygon=False):
     """
     Return the GeoDataFrame geometry coordinates as list.
 
-    >>> import geopandas as gpd
     >>> from shapely.geometry import LineString
     >>> geo_dataframe_to_list(gpd.GeoDataFrame(geometry=[LineString([(0, 0), (1, 1)])]))
     [[(0.0, 0.0), (1.0, 1.0)]]
@@ -47,7 +46,6 @@ def geo_bounds(data_frame, polygon=False):
     """
     Return the minimum and maximum x and y coordinates in the given GeoDataFrame.
 
-    >>> import geopandas as gpd
     >>> from shapely.geometry import LineString
     >>> geo_bounds(gpd.GeoDataFrame(geometry=[LineString([(0, 0), (1, 1)])]))
     (0.0, 0.0, 1.0, 1.0)
@@ -122,15 +120,17 @@ def geo_normalize(
     return to_return
 
 
-def geo_dataframe_to_binmat(data_frame, dims, relative_geo_data, slack=0):
+def geo_dataframe_to_binmat(
+    data_frame: gpd.GeoDataFrame, dims, relative_geo_data, slack: int = 0
+):
     """
     Return a binary matrix where 1s correspond to the coordinates in the dataframe.
 
     Slack determines how accurately the pixels in return array are turned into 1s.
+    I.e. it is equivalent to a buffer around each trace.
     The higher abs(slack) the more "rounded" the areas.
 
     >>> from shapely.geometry import LineString, box
-    >>> import geopandas as gpd
     >>> geo_dataframe_to_binmat(gpd.GeoDataFrame(geometry=[LineString([(0, 0), (5, 5)])]), dims=(10, 10), relative_geo_data=gpd.GeoSeries(box(0, 0, 10, 10)))
     array([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
            [0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
@@ -184,7 +184,11 @@ def geo_dataframe_to_binmat(data_frame, dims, relative_geo_data, slack=0):
                 try:
                     for x_s in range(-slack, slack + 1):
                         for y_s in range(-slack, slack + 1):
-                            to_return[y + y_s, x + x_s] = 1
+                            result_y = y + y_s
+                            result_x = x + x_s
+                            if result_y < 0 or result_x < 0:
+                                continue
+                            to_return[result_y, result_x] = 1
                 except IndexError:
                     continue
 
