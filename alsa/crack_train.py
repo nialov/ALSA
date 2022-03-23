@@ -80,7 +80,9 @@ def preprocess_images(
             suf += 1
 
 
-def plot_training_process(epochs: int, H, training_plot_output: Optional[Path]):
+def plot_training_process(
+    epochs: int, fitted_model, training_plot_output: Optional[Path]
+):
     """
     Plot training statistics and progress.
     """
@@ -90,18 +92,34 @@ def plot_training_process(epochs: int, H, training_plot_output: Optional[Path]):
     color = "tab:red"
     ax1.set_xlabel("Epoch Number")
     ax1.set_ylabel("Loss", color=color)
-    ax1.plot(np.arange(0, epochs), H.history["loss"], label="train_loss", color="green")
-    ax1.plot(np.arange(0, epochs), H.history["val_loss"], label="val_loss", color="red")
+    ax1.plot(
+        np.arange(0, epochs),
+        fitted_model.history["loss"],
+        label="train_loss",
+        color="green",
+    )
+    ax1.plot(
+        np.arange(0, epochs),
+        fitted_model.history["val_loss"],
+        label="val_loss",
+        color="red",
+    )
     ax1.legend(loc="upper left")
     ax1.tick_params(axis="y", labelcolor=color)
     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
     color2 = "tab:blue"
     ax2.set_ylabel("Accuracy", color=color2)  # we already handled the x-label with ax1
     ax2.plot(
-        np.arange(0, epochs), H.history["accuracy"], label="train_acc", color="black"
+        np.arange(0, epochs),
+        fitted_model.history["accuracy"],
+        label="train_acc",
+        color="black",
     )
     ax2.plot(
-        np.arange(0, epochs), H.history["val_accuracy"], label="val_acc", color="blue"
+        np.arange(0, epochs),
+        fitted_model.history["val_accuracy"],
+        label="val_acc",
+        color="blue",
     )
     ax2.tick_params(axis="y", labelcolor=color2)
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
@@ -257,7 +275,9 @@ def train_main(
     if training_plot_output is None:
         training_plot_output = work_dir / "training_plot.png"
     plot_training_process(
-        epochs=epochs, H=fitted_model, training_plot_output=training_plot_output
+        epochs=epochs,
+        fitted_model=fitted_model,
+        training_plot_output=training_plot_output,
     )
 
 
