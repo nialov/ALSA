@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+testpaths =[
+    "tests",
+    "alsa",
+    ]
+addopts = "--doctest-modules"
+doctest_optionflags =[
+    "NUMBER",
+    "NORMALIZE_WHITESPACE",
+    ]
+
+filterwarnings =[
+    ]
