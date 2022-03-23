@@ -1,6 +1,7 @@
 """
 Test crack_train.py
 """
+import os
 from pathlib import Path
 from shutil import copy
 
@@ -10,6 +11,7 @@ import tests
 from alsa import crack_train
 
 
+@pytest.fixture
 def setup_train_test(tmp_path: Path):
     """
     Setup training data for test(s).
@@ -17,7 +19,7 @@ def setup_train_test(tmp_path: Path):
     assert len(list(tmp_path.iterdir())) == 0
 
     # Setup directories
-    crack_train.train_setup(tmp_path)
+    crack_train.train_directory_setup(tmp_path)
 
     # Copy test data to training and validation directories
     tests.copy_files_from_dir_to_dir(
@@ -34,13 +36,54 @@ def setup_train_test(tmp_path: Path):
         tests.KL5_TEST_TRACES_DIR, tmp_path / crack_train.VAL_SHP_DIR
     )
     copy(tests.KL5_TEST_IMAGE, tmp_path / crack_train.ORG_VAL_IMG_DIR)
+    return tmp_path
 
 
-def test_train(tmp_path: Path):
+def test_setup_training(setup_train_test):
+    """
+    Test setup_training.
+    """
+    tmp_path = setup_train_test
+
+    training_list, validation_list = crack_train.setup_training(tmp_path)
+
+    assert len(training_list) > 0
+
+    # Same data used in this case
+    assert len(training_list) == len(validation_list)
+
+    return training_list, validation_list
+
+
+def test_preprocess_images(setup_train_test):
+    """
+    Test preprocess_images.
+    """
+    tmp_path = setup_train_test
+    assert isinstance(tmp_path, Path)
+    training_list, _ = test_setup_training(tmp_path)
+
+    source_src_dir = tmp_path / crack_train.SOURCE_SRC_DIR
+    labels_lbl_dir = tmp_path / crack_train.LABELS_LBL_DIR
+
+    crack_train.preprocess_images(
+        training_list=training_list,
+        source_src_dir=source_src_dir,
+        labels_lbl_dir=labels_lbl_dir,
+    )
+
+    assert len(list(source_src_dir.glob("*.png"))) > 0
+    assert len(list(labels_lbl_dir.glob("*.png"))) > 0
+
+
+@pytest.mark.skipif(
+    os.environ.get("CI") is not None, reason="Tensorflow crashes on Github Actions."
+)
+def test_train(setup_train_test):
     """
     Test model training.
     """
-    setup_train_test(tmp_path=tmp_path)
+    tmp_path = setup_train_test
 
     # Conduct training
     crack_train.train_main(

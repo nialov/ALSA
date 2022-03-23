@@ -1,15 +1,20 @@
 """
 Tests for crack_main.py.
 """
+import os
 from warnings import warn
 
 import geopandas as gpd
+import pytest
 from shapely.geometry import LineString, MultiLineString
 
 import tests
 from alsa import crack_main
 
 
+@pytest.mark.skipif(
+    os.environ.get("CI") is not None, reason="Tensorflow crashes on Github Actions."
+)
 def test_crack_main(tmp_path):
     """
     Test crack_main.
