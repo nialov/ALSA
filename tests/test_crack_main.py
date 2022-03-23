@@ -21,8 +21,7 @@ def test_crack_main(tmp_path):
     """
     traces_path = tmp_path / "test_crack_main_traces.shp"
     if not tests.KL5_TEST_WEIGHTS.exists():
-        warn("Skipping test_crack_main as weights are missing.")
-        return
+        pytest.xfail("Skipping test_crack_main as weights are missing.")
     nworks, orig_dims, geo_data, result_gdf = crack_main.crack_main(
         work_dir=tmp_path,
         img_path=tests.KL5_TEST_IMAGE,

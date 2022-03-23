@@ -1,7 +1,6 @@
 """
 Tests for model.py.
 """
-
 import pytest
 from tensorflow.keras.models import Model
 
@@ -21,6 +20,10 @@ def test_unet(pretrained_weigths, input_size):
     """
     Test unet.
     """
+    if pretrained_weigths is not None and not pretrained_weigths.exists():
+        pytest.xfail(
+            "Model weights were not found on disk. Skipping current test_unet test."
+        )
     result = model.unet(pretrained_weights=pretrained_weigths, input_size=input_size)
 
     assert isinstance(result, Model)
