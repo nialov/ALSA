@@ -11,6 +11,38 @@ import tests
 from alsa import crack_train
 
 
+def add_kl5_training_data(tmp_path: Path, rename_count: int = 1):
+    """
+    Add kl5 sample data to correct directories.
+
+    Using the rename_count argument you can rename the sample data
+    a specified number of times to e.g.
+    test training with multiple images and associated labels and bounds.
+    Same kl5 data will however be used.
+    """
+    for i in range(rename_count):
+        rename = ("kl5", f"kl{5+i}")
+        for area_dir in (crack_train.SHP_BOUNDS_DIR, crack_train.VAL_BOUND_DIR):
+            tests.copy_files_from_dir_to_dir(
+                tests.KL5_TEST_AREA_DIR, tmp_path / area_dir, rename=rename
+            )
+
+        for traces_dir in (crack_train.SHP_DIR, crack_train.VAL_SHP_DIR):
+            # Copy test data to training and validation directories
+            tests.copy_files_from_dir_to_dir(
+                tests.KL5_TEST_TRACES_DIR, tmp_path / traces_dir, rename=rename
+            )
+
+        output_img_name = tests.KL5_TEST_IMAGE.name
+        if len(rename) == 2:
+            output_img_name = output_img_name.replace(*rename)
+
+        for img_dir in (crack_train.ORIG_IMG_DIR, crack_train.ORG_VAL_IMG_DIR):
+            copy(tests.KL5_TEST_IMAGE, tmp_path / img_dir / output_img_name)
+
+    assert len(list(tmp_path.rglob("*.png"))) == rename_count * 2
+
+
 @pytest.fixture
 def setup_train_test(tmp_path: Path):
     """
@@ -21,29 +53,11 @@ def setup_train_test(tmp_path: Path):
     # Setup directories
     crack_train.train_directory_setup(tmp_path)
 
-    # Copy test data to training and validation directories
-    tests.copy_files_from_dir_to_dir(
-        tests.KL5_TEST_AREA_DIR, tmp_path / crack_train.SHP_BOUNDS_DIR
-    )
-    tests.copy_files_from_dir_to_dir(
-        tests.KL5_TEST_TRACES_DIR, tmp_path / crack_train.SHP_DIR
-    )
-    copy(tests.KL5_TEST_IMAGE, tmp_path / crack_train.ORIG_IMG_DIR)
-    tests.copy_files_from_dir_to_dir(
-        tests.KL5_TEST_AREA_DIR, tmp_path / crack_train.VAL_BOUND_DIR
-    )
-    tests.copy_files_from_dir_to_dir(
-        tests.KL5_TEST_TRACES_DIR, tmp_path / crack_train.VAL_SHP_DIR
-    )
-    copy(tests.KL5_TEST_IMAGE, tmp_path / crack_train.ORG_VAL_IMG_DIR)
     return tmp_path
 
 
-def test_setup_training(setup_train_test):
-    """
-    Test setup_training.
-    """
-    tmp_path = setup_train_test
+def _test_setup_training(tmp_path: Path, rename_count: int):
+    add_kl5_training_data(tmp_path=tmp_path, rename_count=rename_count)
 
     training_list, validation_list = crack_train.setup_training(tmp_path)
 
@@ -55,13 +69,23 @@ def test_setup_training(setup_train_test):
     return training_list, validation_list
 
 
+@pytest.mark.parametrize("rename_count", [2, 3])
+def test_setup_training(setup_train_test, rename_count):
+    """
+    Test setup_training.
+    """
+    tmp_path = setup_train_test
+    return _test_setup_training(tmp_path=tmp_path, rename_count=rename_count)
+
+
 def test_preprocess_images(setup_train_test):
     """
     Test preprocess_images.
     """
     tmp_path = setup_train_test
+    add_kl5_training_data(tmp_path=tmp_path)
     assert isinstance(tmp_path, Path)
-    training_list, _ = test_setup_training(tmp_path)
+    training_list, _ = _test_setup_training(tmp_path, rename_count=1)
 
     source_src_dir = tmp_path / crack_train.SOURCE_SRC_DIR
     labels_lbl_dir = tmp_path / crack_train.LABELS_LBL_DIR
@@ -79,11 +103,13 @@ def test_preprocess_images(setup_train_test):
 @pytest.mark.skipif(
     os.environ.get("CI") is not None, reason="Tensorflow crashes on Github Actions."
 )
-def test_train(setup_train_test):
+@pytest.mark.parametrize("rename_count", [1, 2])
+def test_train(setup_train_test, rename_count):
     """
     Test model training.
     """
     tmp_path = setup_train_test
+    add_kl5_training_data(tmp_path=tmp_path, rename_count=rename_count)
 
     # Conduct training
     crack_train.train_main(

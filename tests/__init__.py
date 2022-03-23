@@ -6,6 +6,7 @@ import os
 from contextlib import contextmanager
 from pathlib import Path
 from shutil import copy
+from typing import Tuple
 
 KL5_TEST_DATA_DIR = Path("tests/sample_data/kl5_test_data")
 
@@ -27,13 +28,19 @@ def change_dir(path: Path):
         os.chdir(original_dir)
 
 
-def copy_files_from_dir_to_dir(input_dir: Path, output_dir: Path):
+def copy_files_from_dir_to_dir(
+    input_dir: Path, output_dir: Path, rename: Tuple[str, str]
+):
     """
     Copy all files from input_dir to output_dir.
     """
     for path in input_dir.iterdir():
         if path.is_file():
-            copy(path, output_dir)
+            output_name = path.name
+            if len(rename) == 2:
+                output_name = output_name.replace(*rename)
+            output_path = output_dir / output_name
+            copy(path, output_path)
 
 
 def match_images_to_labels_and_bounds_params():
