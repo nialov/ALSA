@@ -3,7 +3,7 @@ Methods for training model.
 """
 import shutil
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import geopandas
 import matplotlib.pyplot as plt
@@ -110,30 +110,37 @@ def plot_training_process(epochs: int, H, training_plot_output: Optional[Path]):
     plt.close()
 
 
-def train_main(
-    epochs: int,
-    validation_steps: int,
-    steps_per_epoch: int,
-    work_dir: Path = Path("."),
-    old_weight_path: Optional[Path] = None,
-    new_weight_path: Optional[Path] = None,
-    training_plot_output: Optional[Path] = None,
-    history_csv_path: Optional[Path] = None,
-):
+def create_generators(work_dir: Path, data_gen_args: Dict[str, Any]):
     """
-    Train model.
-
-    Continues training the model with weights in old_weight_path.
-    If None, starts from scratch and saves it to working directory.
-    New weights will be saved to a file in new_weight_path.
-    If None, it will instead overwrite the old one.
+    Create training and validation generators.
     """
-    work_dir = work_dir.absolute()
+    train_generator = trainGenerator(
+        batch_size=64,
+        train_path=work_dir / GEN_DIR,
+        image_folder="Source",
+        mask_folder="Labels",
+        aug_dict=data_gen_args,
+        save_to_dir=None,
+    )
 
-    if new_weight_path is None:
-        new_weight_path = work_dir / WEIGHT_PATH
-    model = unet(old_weight_path)
+    val_generator = trainGenerator(
+        batch_size=64,
+        train_path=work_dir / VAL_IMG_DIR,
+        image_folder="Source_v",
+        mask_folder="Labels_v",
+        aug_dict=data_gen_args,
+        save_to_dir=None,
+    )
+    return train_generator, val_generator
 
+
+def setup_training(work_dir: Path):
+    """
+    Collect and associate training and validation images.
+
+    Associates images to traces (labels) and areas (bounds)
+    based on filenames in training and validation directories.
+    """
     orig_img_dir = work_dir / ORIG_IMG_DIR
     shp_dir = work_dir / SHP_DIR
     shp_bounds_dir = work_dir / SHP_BOUNDS_DIR
@@ -180,6 +187,35 @@ def train_main(
         labels_lbl_dir=work_dir / LABELS_V_LBL_V_DIR,
     )
 
+    return training_list, validation_list
+
+
+def train_main(
+    epochs: int,
+    validation_steps: int,
+    steps_per_epoch: int,
+    work_dir: Path = Path("."),
+    old_weight_path: Optional[Path] = None,
+    new_weight_path: Optional[Path] = None,
+    training_plot_output: Optional[Path] = None,
+    history_csv_path: Optional[Path] = None,
+):
+    """
+    Train model.
+
+    Continues training the model with weights in old_weight_path.
+    If None, starts from scratch and saves it to working directory.
+    New weights will be saved to a file in new_weight_path.
+    If None, it will instead overwrite the old one.
+    """
+    work_dir = work_dir.absolute()
+
+    if new_weight_path is None:
+        new_weight_path = work_dir / WEIGHT_PATH
+    model = unet(old_weight_path)
+
+    setup_training(work_dir=work_dir)
+
     # set up the training generator's image altering parameters
     data_gen_args = dict(
         rotation_range=0.2,
@@ -190,31 +226,15 @@ def train_main(
         horizontal_flip=True,
         fill_mode="nearest",
     )
-
-    # sv_dir = work_dir + '/Training/Images/' #bc
-    train_generator = trainGenerator(
-        batch_size=64,
-        train_path=work_dir / GEN_DIR,
-        image_folder="Source",
-        mask_folder="Labels",
-        aug_dict=data_gen_args,
-        save_to_dir=None,
-    )
-
-    val_generator = trainGenerator(
-        batch_size=64,
-        train_path=work_dir / VAL_IMG_DIR,
-        image_folder="Source_v",
-        mask_folder="Labels_v",
-        aug_dict=data_gen_args,
-        save_to_dir=None,
+    train_generator, val_generator = create_generators(
+        work_dir=work_dir, data_gen_args=data_gen_args
     )
 
     model_checkpoint = ModelCheckpoint(
         new_weight_path, monitor="val_loss", mode="min", verbose=1, save_best_only=True
     )  # BC monitoring validation loss instead of training loss
 
-    H = model.fit(
+    fitted_model = model.fit(
         train_generator,
         validation_data=val_generator,
         validation_steps=validation_steps,
@@ -224,7 +244,7 @@ def train_main(
     )
 
     # convert the history.history dict to a pandas DataFrame:
-    hist_df_ = pd.DataFrame(H.history)
+    hist_df_ = pd.DataFrame(fitted_model.history)
     # save to csv:
     if history_csv_path is None:
         history_csv_path = work_dir / HISTORY_CSV_PATH
@@ -236,10 +256,12 @@ def train_main(
     # Plot training progress
     if training_plot_output is None:
         training_plot_output = work_dir / "training_plot.png"
-    plot_training_process(epochs=epochs, H=H, training_plot_output=training_plot_output)
+    plot_training_process(
+        epochs=epochs, H=fitted_model, training_plot_output=training_plot_output
+    )
 
 
-def train_setup(work_dir: Path = Path(".")):
+def train_directory_setup(work_dir: Path = Path(".")):
     """
     Set up training and validation directories.
 
