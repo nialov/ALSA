@@ -59,7 +59,9 @@ def setup_train_test(tmp_path: Path):
 def _test_setup_training(tmp_path: Path, rename_count: int):
     add_kl5_training_data(tmp_path=tmp_path, rename_count=rename_count)
 
-    training_list, validation_list = crack_train.setup_training(tmp_path)
+    training_list, validation_list = crack_train.setup_training(
+        tmp_path,
+    )
 
     assert len(training_list) > 0
 
@@ -75,7 +77,7 @@ def test_setup_training(setup_train_test, rename_count):
     Test setup_training.
     """
     tmp_path = setup_train_test
-    return _test_setup_training(tmp_path=tmp_path, rename_count=rename_count)
+    _test_setup_training(tmp_path=tmp_path, rename_count=rename_count)
 
 
 def test_preprocess_images(setup_train_test):
@@ -85,6 +87,7 @@ def test_preprocess_images(setup_train_test):
     tmp_path = setup_train_test
     add_kl5_training_data(tmp_path=tmp_path)
     assert isinstance(tmp_path, Path)
+    trace_width = 0.1
     training_list, _ = _test_setup_training(tmp_path, rename_count=1)
 
     source_src_dir = tmp_path / crack_train.SOURCE_SRC_DIR
@@ -94,6 +97,8 @@ def test_preprocess_images(setup_train_test):
         training_list=training_list,
         source_src_dir=source_src_dir,
         labels_lbl_dir=labels_lbl_dir,
+        cell_size=512,
+        trace_width=trace_width,
     )
 
     assert len(list(source_src_dir.glob("*.png"))) > 0
@@ -103,8 +108,8 @@ def test_preprocess_images(setup_train_test):
 @pytest.mark.skipif(
     os.environ.get("CI") is not None, reason="Tensorflow crashes on Github Actions."
 )
-@pytest.mark.parametrize("rename_count", [1, 2])
-def test_train(setup_train_test, rename_count):
+@pytest.mark.parametrize("rename_count, batch_size", [(1, 8), (2, 4)])
+def test_train(setup_train_test, rename_count, batch_size):
     """
     Test model training.
     """
@@ -113,7 +118,12 @@ def test_train(setup_train_test, rename_count):
 
     # Conduct training
     crack_train.train_main(
-        epochs=1, validation_steps=1, steps_per_epoch=1, work_dir=tmp_path
+        epochs=1,
+        validation_steps=1,
+        steps_per_epoch=1,
+        work_dir=tmp_path,
+        trace_width=0.1,
+        batch_size=batch_size,
     )
 
     # Test that training has created expected files
