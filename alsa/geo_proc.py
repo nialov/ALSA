@@ -1,10 +1,15 @@
 """
 Geometry and GIS related utilities.
 """
+import logging
+import math
 import os
+from typing import Callable, List, Tuple
 
 import geopandas as gpd
 import numpy as np
+from shapely.geometry import LineString, MultiLineString
+from sklearn.preprocessing import minmax_scale
 
 from alsa.crack_maths import line_point_generator, linear_converter
 
@@ -42,86 +47,58 @@ def geo_dataframe_to_list(data_frame, polygon=False):
     return to_return
 
 
-def geo_bounds(data_frame, polygon=False):
+def normalize_slack(unit_vector: np.ndarray, slack: int) -> int:
     """
-    Return the minimum and maximum x and y coordinates in the given GeoDataFrame.
-
-    >>> from shapely.geometry import LineString
-    >>> geo_bounds(gpd.GeoDataFrame(geometry=[LineString([(0, 0), (1, 1)])]))
-    (0.0, 0.0, 1.0, 1.0)
+    Normalize slack based on unit vector of line.
     """
-    bound_list = []
-
-    if polygon:
-        return data_frame.bounds
-    else:
-        for line in data_frame.geometry:
-            bound_list.append(line.bounds)
-
-    x_min = bound_list[0][0]
-    y_min = bound_list[0][1]
-    x_max = bound_list[0][2]
-    y_max = bound_list[0][3]
-    for boundary in bound_list:
-        if boundary[0] < x_min:
-            x_min = boundary[0]
-        if boundary[1] < y_min:
-            y_min = boundary[1]
-        if boundary[2] > x_max:
-            x_max = boundary[2]
-        if boundary[3] > y_max:
-            y_max = boundary[3]
-
-    return x_min, y_min, x_max, y_max
+    sqrt_two = 1 / np.sqrt(2)
+    max_val = abs(abs(sqrt_two) + abs(sqrt_two))
+    min_val = 1
+    a = unit_vector[0]
+    b = unit_vector[1]
+    diff = abs(abs(a) + abs(b))
+    inverse_weight = minmax_scale(
+        [min_val, diff, max_val], feature_range=(1.0, np.sqrt(2))
+    )[1]
+    normed_slack = slack / inverse_weight
+    normed_slack_int = math.ceil(normed_slack)
+    return normed_slack_int
 
 
-def geo_normalize(
-    data_frame,
-    x_min=0,
-    y_min=0,
-    x_max=1,
-    y_max=1,
-    polygon=False,
-    relative_geo_data=None,
+def determine_real_to_pixel_ratio(
+    image_shape: Tuple[int, int],
+    min_x: float,
+    min_y: float,
+    max_x: float,
+    max_y: float,
 ):
     """
-    Normalize the coordinates in the GeoDataFrame into the given range and return it as a list.
-
-    TODO: Need to check what this actually does...
+    Determine ratio to transform real units to pixels.
     """
-    if polygon:
-        bounds = data_frame.geometry[0].bounds
-    else:
-        bounds = geo_bounds(relative_geo_data, polygon=False)
-    x_range = bounds[2] - bounds[0]
-    y_range = bounds[3] - bounds[1]
+    image_x = image_shape[1]
+    image_y = image_shape[0]
+    diff_x = max_x - min_x
+    diff_y = max_y - min_y
 
-    crd_list = geo_dataframe_to_list(data_frame, polygon=polygon)
-    to_return = []
+    resolution_x = image_x / diff_x
+    resolution_y = image_y / diff_y
 
-    for line in crd_list:
-        lines = []
-        for point in line:
-            crds = []
-            x_pass = y_pass = False
-            x_c = (x_max - x_min) * (point[0] - bounds[0]) / x_range + x_min
-            if x_min <= x_c <= x_max:
-                crds.append(x_c)
-                x_pass = True
-            y_c = (y_min - y_max) * (point[1] - bounds[1]) / y_range + y_max
+    # Should be similar as cells are rectangles
+    if not np.isclose(resolution_x, resolution_y):
+        logging.error(
+            f"Resolution in x and y axes differ: x: {resolution_x} y: {resolution_y}"
+        )
 
-            if y_min <= y_c <= y_max:
-                crds.append(y_c)
-                y_pass = True
+    resolution = np.mean([resolution_x, resolution_y])
 
-            if x_pass and y_pass:
-                lines.append(crds)
-        to_return.append(lines)
-    return to_return
+    return resolution
 
 
 def geo_dataframe_to_binmat(
-    data_frame: gpd.GeoDataFrame, dims, relative_geo_data, slack: int = 0
+    data_frame: gpd.GeoDataFrame,
+    dims,
+    relative_geo_data: gpd.GeoDataFrame,
+    slack: int = 0,
 ):
     """
     Return a binary matrix where 1s correspond to the coordinates in the dataframe.
@@ -143,47 +120,72 @@ def geo_dataframe_to_binmat(
            [0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
            [0., 1., 0., 0., 0., 0., 0., 0., 0., 0.]])
     """
-    to_return = np.zeros(dims)
-    bounds = relative_geo_data.bounds
-    min_x, min_y, max_x, max_y = (
-        bounds.minx[0],
-        bounds.miny[0],
-        bounds.maxx[0],
-        bounds.maxy[0],
-    )
 
-    convX = linear_converter((min_x, max_x), (0, dims[1]), ignore_errors=True)
-    convY = linear_converter((min_y, max_y), (dims[0], 0), ignore_errors=True)
-
-    def append_coord_list(coord_list, line_string):
+    def append_coord_list(
+        coord_list: List[Tuple[int, int]],
+        line_string: LineString,
+        convert_x: Callable,
+        convert_y: Callable,
+    ):
         x_list = line_string.xy[0]
         y_list = line_string.xy[1]
 
         for (x, y) in zip(x_list, y_list):
-            x = int(convX(x))
-            y = int(convY(y))
+            x = int(convert_x(x))
+            y = int(convert_y(y))
             coord_list.append((x, y))
 
         return coord_list
+
+    to_return = np.zeros(dims)
+    min_x, min_y, max_x, max_y = relative_geo_data.total_bounds
+
+    assert min_x < max_x
+    assert min_y < max_y
+
+    convert_x = linear_converter((min_x, max_x), (0, dims[1]), ignore_errors=True)
+    convert_y = linear_converter((min_y, max_y), (dims[0], 0), ignore_errors=True)
 
     for line in data_frame.geometry:
         if line is None:
             continue
         coord_list = list()
-        if line.type == "MultiLineString":
-            for line_s in line:
-                append_coord_list(coord_list, line_s)
+        # if line.type == "MultiLineString":
+        if isinstance(line, MultiLineString):
+            for line_s in line.geoms:
+                append_coord_list(
+                    coord_list, line_s, convert_x=convert_x, convert_y=convert_y
+                )
+        elif isinstance(line, LineString):
+            append_coord_list(
+                coord_list, line, convert_x=convert_x, convert_y=convert_y
+            )
         else:
-            append_coord_list(coord_list, line)
+            raise TypeError(
+                f"Expected geometries to be (Multi)LineStrings. Got: {type(line)}"
+            )
 
+        # (Multi)LineStrings consist of segments between coordinate points
+        # Iterate through each segment start and end point:
         for i, crd2 in enumerate(coord_list):
+            # crd2 is the end point
             if i == 0:
                 continue
+            # crd1 is the start point
             crd1 = coord_list[i - 1]
+
+            # Normalize the slack based on the orientation of the line
+            # Vertical or horizontal line slack will not be effected
+            # but all others are lowered based on the orientation.
+            vector = np.array([crd2[1] - crd1[1], crd2[0] - crd1[0]])
+            unit_vector = vector / np.linalg.norm(vector)
+            normed_slack = normalize_slack(unit_vector=unit_vector, slack=slack)
+
+            # Generate points along a segment
             for x, y in line_point_generator(crd1, crd2):
                 try:
-                    for x_s in range(-slack, slack + 1):
-                        for y_s in range(-slack, slack + 1):
+                    for x_s in range(-normed_slack, normed_slack + 1):
+                        for y_s in range(-normed_slack, normed_slack + 1):
                             result_y = y + y_s
                             result_x = x + x_s
                             if result_y < 0 or result_x < 0:

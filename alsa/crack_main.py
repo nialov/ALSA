@@ -18,7 +18,7 @@ Proposed improvements:
 """
 from pathlib import Path
 
-import geopandas
+import geopandas as gpd
 import numpy as np
 
 import alsa.geo_proc as gp
@@ -39,14 +39,8 @@ def crack_main(
     sub_imgs = ip.open_image(img_path)
     orig_dims = sub_imgs.shape
 
-    geo_data = geopandas.GeoDataFrame.from_file(area_shp_file_path)
-    bounds = gp.geo_bounds(geo_data, polygon=True)
-    min_x, min_y, max_x, max_y = (
-        bounds.minx[0],
-        bounds.miny[0],
-        bounds.maxx[0],
-        bounds.maxy[0],
-    )
+    geo_data = gpd.read_file(area_shp_file_path)
+    min_x, min_y, max_x, max_y = geo_data.total_bounds
 
     w, h = (256, 256)
     sub_imgs = ip.img_segmentation(sub_imgs, width=w, height=h)

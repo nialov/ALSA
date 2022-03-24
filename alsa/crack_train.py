@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import geopandas
+import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -53,20 +53,34 @@ def preprocess_images(
     training_list: List[Tuple[Path, Path, Path]],
     source_src_dir: Path,
     labels_lbl_dir: Path,
+    trace_width: float,
+    cell_size: int,
 ):
     """
     Preprocess training or validation images.
     """
     for ind, (img, geo_file, geo_bounds) in enumerate(training_list):
         img = ip.open_image(img)
-        geo_data = geopandas.GeoDataFrame.from_file(geo_file)
-        geo_area = geopandas.GeoDataFrame.from_file(geo_bounds)
+        geo_data = gpd.GeoDataFrame.from_file(geo_file)
+        geo_area = gpd.GeoDataFrame.from_file(geo_bounds)
+
+        min_x, min_y, max_x, max_y = geo_area.total_bounds
+
+        real_to_pixel_ratio = gp.determine_real_to_pixel_ratio(
+            image_shape=img.shape,
+            min_x=min_x,
+            min_y=min_y,
+            max_x=max_x,
+            max_y=max_y,
+        )
+        slack = int(real_to_pixel_ratio * trace_width)
+
         label_bin_img = gp.geo_dataframe_to_binmat(
-            geo_data, img.shape, relative_geo_data=geo_area, slack=0
+            geo_data, img.shape, relative_geo_data=geo_area, slack=slack
         )
 
         # divide original img (and binary images) into sub images of shape (h, w) and save them
-        w, h = (256, 256)
+        w, h = (cell_size, cell_size)
         sub_imgs = ip.img_segmentation(img, width=w, height=h)
         sub_bin_imgs = ip.img_segmentation(label_bin_img, width=w, height=h)
         suf = 1
@@ -128,12 +142,12 @@ def plot_training_process(
     plt.close()
 
 
-def create_generators(work_dir: Path, data_gen_args: Dict[str, Any]):
+def create_generators(work_dir: Path, data_gen_args: Dict[str, Any], batch_size: int):
     """
     Create training and validation generators.
     """
     train_generator = trainGenerator(
-        batch_size=64,
+        batch_size=batch_size,
         train_path=work_dir / GEN_DIR,
         image_folder="Source",
         mask_folder="Labels",
@@ -142,7 +156,7 @@ def create_generators(work_dir: Path, data_gen_args: Dict[str, Any]):
     )
 
     val_generator = trainGenerator(
-        batch_size=64,
+        batch_size=batch_size,
         train_path=work_dir / VAL_IMG_DIR,
         image_folder="Source_v",
         mask_folder="Labels_v",
@@ -176,12 +190,6 @@ def setup_training(work_dir: Path):
 
     assert len(training_list) > 0, "Could not find any .png-.shp file pairs."
 
-    preprocess_images(
-        training_list=training_list,
-        source_src_dir=work_dir / SOURCE_SRC_DIR,
-        labels_lbl_dir=work_dir / LABELS_LBL_DIR,
-    )
-
     org_val_img_dir = work_dir / ORG_VAL_IMG_DIR
     val_shp_dir = work_dir / VAL_SHP_DIR
     val_bound_dir = work_dir / VAL_BOUND_DIR
@@ -199,19 +207,42 @@ def setup_training(work_dir: Path):
 
     assert len(validation_list) > 0, "Could not find any .png-.shp file pairs."
 
+    return training_list, validation_list
+
+
+def preprocess_training_and_validation(
+    work_dir: Path,
+    training_list: list,
+    validation_list: list,
+    trace_width: float,
+    cell_size: int,
+):
+    """
+    Create sub-images of training and validation data.
+    """
+    preprocess_images(
+        training_list=training_list,
+        source_src_dir=work_dir / SOURCE_SRC_DIR,
+        labels_lbl_dir=work_dir / LABELS_LBL_DIR,
+        trace_width=trace_width,
+        cell_size=cell_size,
+    )
     preprocess_images(
         training_list=validation_list,
         source_src_dir=work_dir / SOURCE_V_SRC_V_DIR,
         labels_lbl_dir=work_dir / LABELS_V_LBL_V_DIR,
+        trace_width=trace_width,
+        cell_size=cell_size,
     )
-
-    return training_list, validation_list
 
 
 def train_main(
     epochs: int,
     validation_steps: int,
     steps_per_epoch: int,
+    trace_width: float,
+    cell_size: int = 256,
+    batch_size: int = 64,
     work_dir: Path = Path("."),
     old_weight_path: Optional[Path] = None,
     new_weight_path: Optional[Path] = None,
@@ -232,9 +263,19 @@ def train_main(
         new_weight_path = work_dir / WEIGHT_PATH
     model = unet(old_weight_path)
 
-    setup_training(work_dir=work_dir)
+    # Associate training and validation images with trace and area data.
+    training_list, validation_list = setup_training(work_dir=work_dir)
 
-    # set up the training generator's image altering parameters
+    # Create sub-images of both training and validation data in correct directories.
+    preprocess_training_and_validation(
+        work_dir=work_dir,
+        training_list=training_list,
+        validation_list=validation_list,
+        trace_width=trace_width,
+        cell_size=cell_size,
+    )
+
+    # Set up the training generator's image altering parameters
     data_gen_args = dict(
         rotation_range=0.2,
         width_shift_range=0.05,
@@ -245,7 +286,9 @@ def train_main(
         fill_mode="nearest",
     )
     train_generator, val_generator = create_generators(
-        work_dir=work_dir, data_gen_args=data_gen_args
+        work_dir=work_dir,
+        data_gen_args=data_gen_args,
+        batch_size=batch_size,
     )
 
     model_checkpoint = ModelCheckpoint(
