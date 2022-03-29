@@ -35,6 +35,8 @@ def crack_main(
     area_shp_file_path: Path,
     unet_weights_path: Path,
     new_shp_path: Path,
+    width: int = 256,
+    height: int = 256,
 ):
     sub_imgs = ip.open_image(img_path)
     orig_dims = sub_imgs.shape
@@ -42,10 +44,9 @@ def crack_main(
     geo_data = gpd.read_file(area_shp_file_path)
     min_x, min_y, max_x, max_y = geo_data.total_bounds
 
-    w, h = (256, 256)
-    sub_imgs = ip.img_segmentation(sub_imgs, width=w, height=h)
-    n_mats_per_row = int(orig_dims[1] / w) + 1
-    n_mats_per_col = int(orig_dims[0] / h) + 1
+    sub_imgs = ip.img_segmentation(sub_imgs, width=width, height=height)
+    n_mats_per_row = int(orig_dims[1] / width) + 1
+    n_mats_per_col = int(orig_dims[0] / height) + 1
     n_mats = n_mats_per_row * n_mats_per_col
 
     # dirs = [work_dir / dir_name for dir_name in ("sub_imgs", "predictions")]
@@ -68,14 +69,16 @@ def crack_main(
     saveResult(predictions_dir, results)
 
     nworks = list()
-    print("creating nworks")
+    # print("creating nworks")
     for i in range(n_mats):
-        print(str(i) + "/" + str(n_mats - 1))
+        # print(str(i) + "/" + str(n_mats - 1))
         if i not in redundant_id_list:
             im_path = predictions_dir / f"{i}_predict.png"
             # im_path = dirs[1] + "/" + str(i) + "_predict.png"
             # coords, _ = sp.ridge_fit(im_path, os.getcwd(), img_shape=(w, h))
-            coords, _ = sp.ridge_fit(im_path, saved_img_dir=work_dir, img_shape=(w, h))
+            coords, _ = sp.ridge_fit(
+                im_path, saved_img_dir=work_dir, img_shape=(width, height)
+            )
             nwork = CrackNetWork(coords)
             nwork.connect()
             nwork.remove_small()
@@ -85,8 +88,8 @@ def crack_main(
             nwork = None
 
         nworks.append(nwork)
-    print("combining nworks")
-    nworks = CrackNetWork.combine_nworks(nworks, (w, h), n_mats_per_row)
+    # print("combining nworks")
+    nworks = CrackNetWork.combine_nworks(nworks, (width, height), n_mats_per_row)
     gdf = nworks.to_geodataframe(orig_dims, (min_x, min_y, max_x, max_y))
     gp.to_shp(gdf, file_path=new_shp_path)
 
