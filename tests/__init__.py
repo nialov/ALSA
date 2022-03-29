@@ -12,7 +12,7 @@ KL5_TEST_DATA_DIR = Path("tests/sample_data/kl5_test_data")
 
 KL5_TEST_AREA_DIR = KL5_TEST_DATA_DIR / "area/"
 KL5_TEST_TRACES_DIR = KL5_TEST_DATA_DIR / "traces/"
-KL5_TEST_IMAGE = KL5_TEST_DATA_DIR / "kl5_subsample_circle.png"
+KL5_TEST_IMAGE = KL5_TEST_DATA_DIR / "kl5_subsample.png"
 KL5_TEST_WEIGHTS = KL5_TEST_DATA_DIR / "unet_weights.hdf5"
 
 
