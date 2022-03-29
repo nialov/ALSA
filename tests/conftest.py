@@ -7,6 +7,7 @@ import pytest
 
 from alsa import crack_train
 
+
 @pytest.fixture
 def setup_train_test(tmp_path: Path):
     """

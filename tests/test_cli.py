@@ -3,15 +3,15 @@ Tests for alsa.cli.
 """
 
 import os
-import pytest
 from traceback import print_tb
 
-from typer.testing import CliRunner, Result
 import geopandas as gpd
+import pytest
+from typer.testing import CliRunner, Result
 
+import tests
 from alsa import cli, crack_train
 from tests.test_crack_train import add_kl5_training_data
-import tests
 
 RUNNER = CliRunner()
 
@@ -30,20 +30,32 @@ def click_error_print(result: Result):
     raise Exception(result.exception)
 
 
-def _test_cli_train(tmp_path, epochs, validation_steps, steps_per_epoch, trace_width, cell_size, batch_size, quiet, dry_run):
+def _test_cli_train(
+    tmp_path,
+    epochs,
+    validation_steps,
+    steps_per_epoch,
+    trace_width,
+    cell_size,
+    batch_size,
+    quiet,
+    dry_run,
+):
     """
     Test command-line interface to training.
     """
     add_kl5_training_data(tmp_path=tmp_path, rename_count=1)
 
-    args = ["train", str(tmp_path),
-            f"--epochs={epochs}",
-            f"--validation-steps={validation_steps}",
-            f"--steps-per-epoch={steps_per_epoch}",
-            f"--trace-width={trace_width}",
-            f"--cell-size={cell_size}",
-            f"--batch-size={batch_size}",
-            ]
+    args = [
+        "train",
+        str(tmp_path),
+        f"--epochs={epochs}",
+        f"--validation-steps={validation_steps}",
+        f"--steps-per-epoch={steps_per_epoch}",
+        f"--trace-width={trace_width}",
+        f"--cell-size={cell_size}",
+        f"--batch-size={batch_size}",
+    ]
     if quiet:
         args.append("--quiet")
     if dry_run:
@@ -73,12 +85,63 @@ def _test_cli_train(tmp_path, epochs, validation_steps, steps_per_epoch, trace_w
 @pytest.mark.skipif(
     os.environ.get("CI") is not None, reason="Tensorflow crashes on Github Actions."
 )
-@pytest.mark.parametrize(",".join(["epochs", "validation_steps", "steps_per_epoch", "trace_width", "cell_size", "batch_size", "quiet", "dry_run"]), [
-    (1, 1, 1, 0.1, 512, 1, False, False,),
-    (1, 1, 1, 0.1, 512, 1, False, True,),
-    (1, 1, 1, 0.1, 512, 1, True, True,),
-])
-def test_cli_train(setup_train_test, epochs, validation_steps, steps_per_epoch, trace_width, cell_size, batch_size, quiet, dry_run):
+@pytest.mark.parametrize(
+    ",".join(
+        [
+            "epochs",
+            "validation_steps",
+            "steps_per_epoch",
+            "trace_width",
+            "cell_size",
+            "batch_size",
+            "quiet",
+            "dry_run",
+        ]
+    ),
+    [
+        (
+            1,
+            1,
+            1,
+            0.1,
+            512,
+            1,
+            False,
+            False,
+        ),
+        (
+            1,
+            1,
+            1,
+            0.1,
+            512,
+            1,
+            False,
+            True,
+        ),
+        (
+            1,
+            1,
+            1,
+            0.1,
+            512,
+            1,
+            True,
+            True,
+        ),
+    ],
+)
+def test_cli_train(
+    setup_train_test,
+    epochs,
+    validation_steps,
+    steps_per_epoch,
+    trace_width,
+    cell_size,
+    batch_size,
+    quiet,
+    dry_run,
+):
     """
     Test command-line interface to training.
     """
@@ -92,7 +155,7 @@ def test_cli_train(setup_train_test, epochs, validation_steps, steps_per_epoch, 
         cell_size=cell_size,
         batch_size=batch_size,
         quiet=quiet,
-        dry_run=dry_run
+        dry_run=dry_run,
     )
 
 
@@ -113,7 +176,7 @@ def test_cli_train_interface(setup_train_test, quiet):
         cell_size=512,
         batch_size=1,
         quiet=quiet,
-        dry_run=True
+        dry_run=True,
     )
 
 
@@ -129,15 +192,17 @@ def test_cli_predict_interface(tmp_path, width, height):
     unet_weights_path = tmp_path / "weights.hdf5"
     unet_weights_path.touch()
     new_shp_path = tmp_path / "predicted_traces.shp"
-    args = ["predict", str(tmp_path),
-            f"--img-path={img_path}"    ,
-            f"--area-shp-file-path={area_shp_file_path}",
-            f"--unet-weights-path={unet_weights_path}",
-            f"--new-shp-path={new_shp_path}",
-            f"--width={width}",
-            f"--height={height}",
-            "--dry-run",
-            ]
+    args = [
+        "predict",
+        str(tmp_path),
+        f"--img-path={img_path}",
+        f"--area-shp-file-path={area_shp_file_path}",
+        f"--unet-weights-path={unet_weights_path}",
+        f"--new-shp-path={new_shp_path}",
+        f"--width={width}",
+        f"--height={height}",
+        "--dry-run",
+    ]
     # Call predict cli interface with dry-run enabled
     result = RUNNER.invoke(cli.APP, args)
 
@@ -177,14 +242,16 @@ def test_train_and_predict(setup_train_test):
     new_shp_path = tmp_path / "predicted_traces.shp"
 
     assert not new_shp_path.exists()
-    args = ["predict", str(tmp_path),
-            f"--img-path={img_path}"    ,
-            f"--area-shp-file-path={area_shp_file_path}",
-            f"--unet-weights-path={unet_weights_path}",
-            f"--new-shp-path={new_shp_path}",
-            f"--width={cell_size}",
-            f"--height={cell_size}",
-            ]
+    args = [
+        "predict",
+        str(tmp_path),
+        f"--img-path={img_path}",
+        f"--area-shp-file-path={area_shp_file_path}",
+        f"--unet-weights-path={unet_weights_path}",
+        f"--new-shp-path={new_shp_path}",
+        f"--width={cell_size}",
+        f"--height={cell_size}",
+    ]
 
     # Call predict cli interface
     result = RUNNER.invoke(cli.APP, args)
@@ -192,7 +259,7 @@ def test_train_and_predict(setup_train_test):
     click_error_print(result)
 
     assert new_shp_path.exists()
-    
+
     gdf = gpd.read_file(new_shp_path)
 
     assert isinstance(gdf, gpd.GeoDataFrame)
