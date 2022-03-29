@@ -14,6 +14,8 @@ dependencies:
   - scipy=1.6.3
   - shapely=1.7.1
   - tensorflow=2.3.0
+  # For the command-line interface
+  - typer
   # For testing
   - pytest
   - pre-commit
