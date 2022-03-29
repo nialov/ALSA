@@ -1,3 +1,64 @@
+[tool.poetry]
+name = "alsa"
+version = "0.0.1"
+description = "Automated Trace Extraction"
+authors = ["nialov <nikolasovaskainen@gmail.com>"]
+readme = "README.md"
+license = "MIT"
+# Make sure hyphens/underscores are correct in urls
+homepage = "https://github.com/nialov/alsa"
+repository = "https://github.com/nialov/alsa"
+# documentation = "https://fractopo.readthedocs.io/en/latest/"
+# For inspiration: https://pydigger.com/keywords
+keywords = [
+    "data",
+    "gis",
+    "geology",
+    "fracture",
+    "topology",
+]
+# See https://pypi.org/classifiers/
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: GIS",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3 :: Only"
+]
+# include = ["CHANGELOG.md"]
+
+[tool.poetry.scripts]
+alsa = "alsa.cli:APP"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/nialov/alsa/issues"
+
+# Changes here should be kept in sync with ./environment.yml
+[tool.poetry.dependencies]
+python = ">=3.8,<3.10"
+geopandas="=0.9.0"
+matplotlib="=3.4.1"
+numpy="=1.20.2"
+pandas="=1.2.4"
+pillow="=8.2.0"
+scikit-image="=0.18.1"
+scipy="=1.6.3"
+shapely="=1.7.1"
+tensorflow="^2.3"
+ridge-detection="=2.0.1"
+scikit-learn="=0.24.2"
+typer = "*"
+click = "<8.1.0"
+
+[tool.poetry.dev-dependencies]
+pre-commit = "*"
+pytest = "*"
+ipython = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.pytest.ini_options]
 testpaths =[
     "tests",
