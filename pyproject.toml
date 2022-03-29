@@ -3,7 +3,7 @@ testpaths =[
     "tests",
     "alsa",
     ]
-addopts = "--doctest-modules"
+addopts = "--doctest-modules --disable-warnings"
 doctest_optionflags =[
     "NUMBER",
     "NORMALIZE_WHITESPACE",
