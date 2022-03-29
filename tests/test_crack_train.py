@@ -43,19 +43,6 @@ def add_kl5_training_data(tmp_path: Path, rename_count: int = 1):
     assert len(list(tmp_path.rglob("*.png"))) == rename_count * 2
 
 
-@pytest.fixture
-def setup_train_test(tmp_path: Path):
-    """
-    Setup training data for test(s).
-    """
-    assert len(list(tmp_path.iterdir())) == 0
-
-    # Setup directories
-    crack_train.train_directory_setup(tmp_path)
-
-    return tmp_path
-
-
 def _test_setup_training(tmp_path: Path, rename_count: int):
     add_kl5_training_data(tmp_path=tmp_path, rename_count=rename_count)
 
