@@ -1355,6 +1355,14 @@ class CrackNetWork:
                     for s, ep in enumerate(line.end_points):
                         if len(seg_list) == 0:
                             eps, _ = CrackNetWork.calculate_end_points(line_s)
+                            # TODO: Understand what all of this does
+                            if len(eps) == 0 or len(line.end_points) == 0:
+                                # TODO: Just added to avoid IndexError
+                                conn_list.append(i)
+                                break
+                            # One might be empty for some reason in the if
+                            # eps[]... statement
+                            # IndexError: list index out of range
                             if eps[0] == line.end_points[0]:
                                 seg_list.extend(
                                     [line.end_points[0], line.end_points[1]]
