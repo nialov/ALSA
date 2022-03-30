@@ -6,7 +6,7 @@ on:
 
 jobs:
   conda-pytest:
-    name: Test 🐍 code
+    name: Test 🐍 code installed with conda
     strategy:
       fail-fast: false
       matrix:
@@ -31,11 +31,11 @@ jobs:
           python -c 'import alsa'
       - name: Run unit tests with pytest
         run: |
-          pytest --disable-warnings --doctest-modules
+          pytest
 
   # Linting
   lint:
-    name: Lint 🐍 code
+    name: Lint 🐍 code using pre-commit
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
@@ -44,7 +44,7 @@ jobs:
 
   # Test with poetry
   poetry-pytest:
-    name: Test 🐍 code
+    name: Test 🐍 code installed with poetry (pip)
     strategy:
       fail-fast: false
       matrix:
