@@ -3,6 +3,7 @@ Tests for alsa.cli.
 """
 
 import os
+from pathlib import Path
 from traceback import print_tb
 
 import geopandas as gpd
@@ -264,3 +265,31 @@ def test_train_and_predict(setup_train_test):
 
     assert isinstance(gdf, gpd.GeoDataFrame)
     assert gdf.shape[0] > 0
+
+
+@pytest.mark.parametrize("setup_dirs", [True, False])
+def test_cli_check(tmp_path: Path, setup_dirs: bool):
+    """
+    Test cli.check.
+    """
+    args = [
+        "check",
+        str(tmp_path),
+    ]
+
+    if setup_dirs:
+        args.append("--setup-dirs")
+
+    orig_img_dir = tmp_path / crack_train.ORIG_IMG_DIR
+    val_img_dir = tmp_path / crack_train.VAL_IMG_DIR
+    assert not orig_img_dir.exists()
+    assert not val_img_dir.exists()
+
+    # Call predict cli interface
+    result = RUNNER.invoke(cli.APP, args)
+
+    click_error_print(result)
+
+    if setup_dirs:
+        assert orig_img_dir.exists() and orig_img_dir.is_dir()
+        assert val_img_dir.exists() and val_img_dir.is_dir()

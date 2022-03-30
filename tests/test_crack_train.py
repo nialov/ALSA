@@ -46,7 +46,7 @@ def add_kl5_training_data(tmp_path: Path, rename_count: int = 1):
 def _test_setup_training(tmp_path: Path, rename_count: int):
     add_kl5_training_data(tmp_path=tmp_path, rename_count=rename_count)
 
-    training_list, validation_list = crack_train.setup_training(
+    training_list, validation_list = crack_train.collect_targets(
         tmp_path,
     )
 
