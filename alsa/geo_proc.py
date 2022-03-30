@@ -61,7 +61,10 @@ def normalize_slack(unit_vector: np.ndarray, slack: int) -> int:
         [min_val, diff, max_val], feature_range=(1.0, np.sqrt(2))
     )[1]
     normed_slack = slack / inverse_weight
-    normed_slack_int = math.ceil(normed_slack)
+    if np.isnan(normed_slack):
+        normed_slack_int = slack
+    else:
+        normed_slack_int = math.ceil(normed_slack)
     return normed_slack_int
 
 
@@ -85,7 +88,7 @@ def determine_real_to_pixel_ratio(
 
     # Should be similar as cells are rectangles
     if not np.isclose(resolution_x, resolution_y):
-        logging.error(
+        logging.info(
             f"Resolution in x and y axes differ: x: {resolution_x} y: {resolution_y}"
         )
 
@@ -184,6 +187,7 @@ def geo_dataframe_to_binmat(
             # Generate points along a segment
             for x, y in line_point_generator(crd1, crd2):
                 try:
+                    # TODO: Loops here get very slow with high slack values.
                     for x_s in range(-normed_slack, normed_slack + 1):
                         for y_s in range(-normed_slack, normed_slack + 1):
                             result_y = y + y_s
