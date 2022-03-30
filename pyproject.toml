@@ -54,6 +54,7 @@ click = "<8.1.0"
 pre-commit = "*"
 pytest = "*"
 ipython = "*"
+jupyterlab = "^3.3.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
