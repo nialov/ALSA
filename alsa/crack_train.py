@@ -46,28 +46,28 @@ def match_images_to_labels_and_bounds(
     corresponding traces (labels) and areas (bounds).
 
     >>> images = [Path("kl5.png")]
-    ... trace_labels = [Path("kl5_traces.shp")]
-    ... bounds = [Path("kl5_area.shp")]
-    ... match_images_to_labels_and_bounds(images, trace_labels, bounds)
+    >>> trace_labels = [Path("kl5_traces.shp")]
+    >>> bounds = [Path("kl5_area.shp")]
+    >>> match_images_to_labels_and_bounds(images, trace_labels, bounds)
     [(PosixPath('kl5.png'), PosixPath('kl5_traces.shp'), PosixPath('kl5_area.shp'))]
 
     With faulty image name:
 
     >>> images = [Path("kl4.png")]
-    ... trace_labels = [Path("kl5_traces.shp")]
-    ... bounds = [Path("kl5_area.shp")]
-    ... match_images_to_labels_and_bounds(images, trace_labels, bounds)
+    >>> trace_labels = [Path("kl5_traces.shp")]
+    >>> bounds = [Path("kl5_area.shp")]
+    >>> match_images_to_labels_and_bounds(images, trace_labels, bounds)
     []
 
     Does not have to be ESRI Shapefiles.
 
     >>> images = [Path("kl5.png")]
-    ... trace_labels = [Path("kl5_traces.geojson")]
-    ... bounds = [Path("kl5_area.geojson")]
-    ... match_images_to_labels_and_bounds(images, trace_labels, bounds)
+    >>> trace_labels = [Path("kl5_traces.geojson")]
+    >>> bounds = [Path("kl5_area.geojson")]
+    >>> match_images_to_labels_and_bounds(images, trace_labels, bounds)
     [(PosixPath('kl5.png'), PosixPath('kl5_traces.geojson'), PosixPath('kl5_area.geojson'))]
     """
-    training_list = []
+    target_list = []
 
     # Iterate over each image path
     for image in images:
@@ -80,8 +80,8 @@ def match_images_to_labels_and_bounds(
                 # Condition is as follows:
                 # image name (stem) must be a subset of the names of traces and area
                 if image.stem in label.name and image.stem in bound.name:
-                    training_list.append((image, label, bound))
-    return training_list
+                    target_list.append((image, label, bound))
+    return target_list
 
 
 def preprocess_images(
@@ -252,10 +252,12 @@ def collect_targets(work_dir: Path, spatial_file_extension: str = "shp"):
 
         images = list(img_dir.glob("*.png")) if img_dir.exists() else []
         trace_labels = (
-            list(shp_dir.glob(f"{spatial_file_extension}")) if shp_dir.exists() else []
+            list(shp_dir.glob(f"*.{spatial_file_extension}"))
+            if shp_dir.exists()
+            else []
         )
         bounds = (
-            list(bounds_dir.glob(f"{spatial_file_extension}"))
+            list(bounds_dir.glob(f"*.{spatial_file_extension}"))
             if bounds_dir.exists()
             else []
         )
@@ -331,7 +333,9 @@ def train_main(
     model = unet(old_weight_path)
 
     # Associate training and validation images with trace and area data.
-    training_list, validation_list = collect_targets(work_dir=work_dir)
+    training_list, validation_list = collect_targets(
+        work_dir=work_dir, spatial_file_extension=spatial_file_extension
+    )
 
     # Check that training and validation targets are found
     # and correctly associated

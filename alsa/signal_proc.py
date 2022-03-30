@@ -3,6 +3,7 @@ Signal processing.
 """
 import collections.abc
 import logging
+from typing import Tuple
 
 import numpy as np
 from ridge_detection.helper import displayContours, save_to_disk
@@ -377,8 +378,8 @@ def ridge_fit(
     img_path,
     saved_img_dir,
     override_ridge_configs: dict,
-    img_shape=(256, 256),
-    slack=1,
+    img_shape: Tuple[int, int] = (256, 256),
+    slack: int = 1,
     save_on_file: bool = False,
 ):
     coords, _ = ridge(

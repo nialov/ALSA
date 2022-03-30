@@ -1,21 +1,8 @@
 """
 Main entrypoint for prediction using trained model.
-
-Proposed improvements:
-
--   Create a parametrization for the connecting line which is solely
-    used to compare and decide which connector should
-    be in the CrackNetWork.connect
--   Create a method for eliminating the case where a line segment
-    crosses another one more than once.
--   Specify in CrackNetWork.connect when to use exact angle
-    difference calculations
--   Parameter optimization
--   Improve parametrization functions to better emphasize on finding
-    the correct angle and less on the distance
-
-
 """
+import logging
+import math
 from pathlib import Path
 
 import geopandas as gpd
@@ -100,13 +87,15 @@ def crack_main(
 
         if i in report_indexes and verbose:
             progress = i / n_mats
-            print(f"Progress at {int(progress) * 100} %")
+            print(f"Progress at {math.ceil(progress * 100)} %")
 
         # Default value
         nwork = None
 
         if i not in redundant_id_list:
+
             # Not too homogeneous based on earlier examination
+            # (not in redundant_id_list)
             im_path = predictions_dir / f"{i}_predict.png"
 
             # Fit coordinates with ridge detection
@@ -130,17 +119,27 @@ def crack_main(
         print("Starting combination of CrackNetWorks.")
 
     # Combine the networks/traces from each sub-image
-    nworks = CrackNetWork.combine_nworks(nworks, (width, height), n_mats_per_row)
+    combined_nwork = CrackNetWork.combine_nworks(
+        nworks, (width, height), n_mats_per_row
+    )
+    assert isinstance(combined_nwork, CrackNetWork)
 
     # Convert to geopandas.GeoDataFrame
-    gdf = nworks.to_geodataframe(orig_dims, (min_x, min_y, max_x, max_y))
+    gdf = combined_nwork.to_geodataframe(orig_dims, (min_x, min_y, max_x, max_y))
+    assert isinstance(gdf, gpd.GeoDataFrame)
 
     # Save to wanted spatial format based on driver (e.g. ESRI Shapefile)
-    gdf.to_file(predicted_output_path, driver=driver)
-    if verbose:
-        print(f"Saved predicted traces to {predicted_output_path}")
+    if not gdf.empty:
+        gdf.to_file(predicted_output_path, driver=driver)
+        if verbose:
+            print(f"Saved predicted traces to {predicted_output_path}")
+    else:
+        logging.error(
+            "Empty GeoDataFrame from prediction.\n"
+            f"image: {img_path}\n weights: {unet_weights_path}"
+        )
 
-    return nworks, orig_dims, geo_data, gdf
+    return combined_nwork, orig_dims, geo_data, gdf
 
 
 # if __name__ == "__main__":
