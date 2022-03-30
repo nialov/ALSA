@@ -2,6 +2,7 @@
 Signal processing.
 """
 import collections.abc
+import logging
 
 import numpy as np
 from ridge_detection.helper import displayContours, save_to_disk
@@ -165,7 +166,14 @@ def ridge(
     img = ip.open_image(img_path, asarray=False)
 
     detect = LineDetector(params=ridge_configs)
-    result = detect.detectLines(img)
+    try:
+        result = detect.detectLines(img)
+    except SystemExit:
+        logging.error(
+            f"Caught SystemExit exception from ridge detection. img_path = {img_path}",
+            exc_info=True,
+        )
+        return [], None
     resultJunction = detect.junctions
 
     out_img, img_only_lines = displayContours(params, result, resultJunction)
