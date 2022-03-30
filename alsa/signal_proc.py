@@ -1,6 +1,8 @@
 """
 Signal processing.
 """
+import collections.abc
+
 import numpy as np
 from ridge_detection.helper import displayContours, save_to_disk
 from ridge_detection.lineDetector import LineDetector
@@ -9,6 +11,47 @@ from scipy import ndimage as ndi
 from skimage.filters import gabor_kernel
 
 import alsa.image_proc as ip
+
+DEFAULT_RIDGE_CONFIGS = {
+    # "path_to_file": img_path,
+    "mandatory_parameters": {
+        # "Sigma": 3.39,
+        # "Lower_Threshold": 0.34,
+        # "Upper_Threshold": 1.02,
+        "Maximum_Line_Length": 0,
+        "Minimum_Line_Length": 0,
+        "Darkline": "LIGHT",
+        "Overlap_resolution": "NONE",
+    },
+    "optional_parameters": {
+        "Line_width": 3,
+        "High_contrast": 200,
+        "Low_contrast": 60,
+    },
+    "further_options": {
+        "Correct_position": True,
+        "Estimate_width": True,
+        "doExtendLine": True,
+        "Show_junction_points": True,
+        "Show_IDs": False,
+        "Display_results": False,
+        "Preview": False,
+        "Make_Binary": True,
+        "save_on_disk": True,
+    },
+}
+
+
+def update(d: dict, u: dict):
+    """
+    Update dictionary d with values from dictionary u.
+    """
+    for k, v in u.items():
+        if isinstance(v, collections.abc.Mapping):
+            d[k] = update(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
 
 
 def compute_feats(image, kernels):
@@ -98,35 +141,24 @@ def avg_denoise(array, pixels=3):
     return to_return
 
 
-def ridge(img_path, saved_img_dir, line_col="LIGHT"):
-    ridge_configs = {
-        "path_to_file": img_path,
-        "mandatory_parameters": {
-            # "Sigma": 3.39,
-            # "Lower_Threshold": 0.34,
-            # "Upper_Threshold": 1.02,
-            "Maximum_Line_Length": 0,
-            "Minimum_Line_Length": 0,
-            "Darkline": line_col,
-            "Overlap_resolution": "NONE",
-        },
-        "optional_parameters": {
-            "Line_width": 3,
-            "High_contrast": 200,
-            "Low_contrast": 60,
-        },
-        "further_options": {
-            "Correct_position": True,
-            "Estimate_width": True,
-            "doExtendLine": True,
-            "Show_junction_points": True,
-            "Show_IDs": False,
-            "Display_results": False,
-            "Preview": False,
-            "Make_Binary": True,
-            "save_on_disk": True,
-        },
-    }
+def resolve_ridge_config(img_path: str, override_ridge_configs: dict) -> dict:
+    """
+    Resolve final ridge detection configuration.
+    """
+    ridge_configs = DEFAULT_RIDGE_CONFIGS
+    ridge_configs["path_to_file"] = img_path
+
+    ridge_configs = update(ridge_configs, override_ridge_configs)
+    return ridge_configs
+
+
+def ridge(
+    img_path, saved_img_dir, override_ridge_configs: dict, save_on_file: bool = False
+):
+
+    ridge_configs = resolve_ridge_config(
+        img_path=img_path, override_ridge_configs=override_ridge_configs
+    )
 
     params = Params(ridge_configs)
 
@@ -137,7 +169,7 @@ def ridge(img_path, saved_img_dir, line_col="LIGHT"):
     resultJunction = detect.junctions
 
     out_img, img_only_lines = displayContours(params, result, resultJunction)
-    if params.get_saveOnFile() is True:
+    if save_on_file:
         save_to_disk(out_img, img_only_lines, str(saved_img_dir))
 
     # result has the coordinates, img_only_lines is an Image
@@ -334,13 +366,23 @@ def calculate_ridge_points(line_o, max_length=80):
         return [[(line_o.col[0], line_o.row[0]), (line_o.col[-1], line_o.row[-1])]]
 
 
-def ridge_fit(img_path, saved_img_dir, img_shape=(256, 256), slack=1, line_col="LIGHT"):
-    coords, img = ridge(
-        img_path=img_path, saved_img_dir=saved_img_dir, line_col=line_col
+def ridge_fit(
+    img_path,
+    saved_img_dir,
+    override_ridge_configs: dict,
+    img_shape=(256, 256),
+    slack=1,
+    save_on_file: bool = False,
+):
+    coords, _ = ridge(
+        img_path=img_path,
+        saved_img_dir=saved_img_dir,
+        override_ridge_configs=override_ridge_configs,
+        save_on_file=save_on_file,
     )
     line_coords_list = list()
     img_list = list()
-    for i, line in enumerate(coords):
+    for _, line in enumerate(coords):
         line_coords = calculate_ridge_points(line)
         im = ip.img_binmat_line_segment(line_coords, img_shape, slack=slack)
         line_coords_list.append(line_coords)

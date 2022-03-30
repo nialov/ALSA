@@ -37,6 +37,7 @@ def crack_main(
     new_shp_path: Path,
     width: int = 256,
     height: int = 256,
+    override_ridge_configs: dict = dict(),
 ):
     sub_imgs = ip.open_image(img_path)
     orig_dims = sub_imgs.shape
@@ -49,7 +50,6 @@ def crack_main(
     n_mats_per_col = int(orig_dims[0] / height) + 1
     n_mats = n_mats_per_row * n_mats_per_col
 
-    # dirs = [work_dir / dir_name for dir_name in ("sub_imgs", "predictions")]
     sub_imgs_dir = work_dir / "sub_imgs"
     predictions_dir = work_dir / "predictions"
     for dir_path in (sub_imgs_dir, predictions_dir):
@@ -59,7 +59,7 @@ def crack_main(
     for i, im in enumerate(sub_imgs):
         if np.quantile(im, 0.95) == 0 or np.quantile(im, 0.05) == 255:
             redundant_id_list.append(i)
-        # im_path = dirs[0] + "/sub_img_" + str(i) + ".png"
+
         img_path = sub_imgs_dir / f"sub_img_{i}.png"
         ip.save_image(img_path, im)
 
@@ -69,15 +69,17 @@ def crack_main(
     saveResult(predictions_dir, results)
 
     nworks = list()
-    # print("creating nworks")
+
     for i in range(n_mats):
-        # print(str(i) + "/" + str(n_mats - 1))
+
         if i not in redundant_id_list:
             im_path = predictions_dir / f"{i}_predict.png"
-            # im_path = dirs[1] + "/" + str(i) + "_predict.png"
-            # coords, _ = sp.ridge_fit(im_path, os.getcwd(), img_shape=(w, h))
+
             coords, _ = sp.ridge_fit(
-                im_path, saved_img_dir=work_dir, img_shape=(width, height)
+                im_path,
+                saved_img_dir=work_dir,
+                img_shape=(width, height),
+                override_ridge_configs=override_ridge_configs,
             )
             nwork = CrackNetWork(coords)
             nwork.connect()

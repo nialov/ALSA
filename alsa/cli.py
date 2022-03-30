@@ -129,6 +129,9 @@ def predict(
     width: int = typer.Option(256),
     height: int = typer.Option(256),
     dry_run: bool = typer.Option(False),
+    override_ridge_config_path: Optional[Path] = typer.Option(
+        None, exists=True, dir_okay=False
+    ),
 ):
     """
     Predict with trained model.
@@ -138,6 +141,12 @@ def predict(
 
     if dry_run:
         return
+
+    if override_ridge_config_path is None:
+        override_ridge_configs = dict()
+    else:
+        override_ridge_configs = json.loads(override_ridge_config_path.read_text())
+
     crack_main.crack_main(
         work_dir=work_dir,
         img_path=img_path,
@@ -146,6 +155,7 @@ def predict(
         new_shp_path=new_shp_path,
         width=width,
         height=height,
+        override_ridge_configs=override_ridge_configs,
     )
 
 
