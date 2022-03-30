@@ -1,8 +1,8 @@
 ALSA - Automatic Fracture Trace Extraction
 ==========================================
 
-Usage
-------------
+Usage (partly deprecated)
+-------------------------
 
 For both CrackTrain and CrackMain:
 -	Extract a .png image of the area to be analyzed
@@ -62,3 +62,17 @@ Model_BC.py
 No major changes, have been trying different parameters for model.compile() using different accuracy metrics, etc.
 
 Other than these, I am in the process of adding class weights/sample weights to the training step. That's still WIP.
+
+Proposed improvements by Jonne
+------------------------------
+
+-   Create a parametrization for the connecting line which is solely
+    used to compare and decide which connector should
+    be in the CrackNetWork.connect
+-   Create a method for eliminating the case where a line segment
+    crosses another one more than once.
+-   Specify in CrackNetWork.connect when to use exact angle
+    difference calculations
+-   Parameter optimization
+-   Improve parametrization functions to better emphasize on finding
+    the correct angle and less on the distance
