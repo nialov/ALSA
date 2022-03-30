@@ -16,6 +16,7 @@ import alsa.image_proc as ip
 from alsa.data import trainGenerator
 from alsa.model import unet
 
+# Directory structure is documented here as Paths
 ORIG_IMG_DIR = Path("Training/Images/Originals")
 SHP_BOUNDS_DIR = Path("Training/Shapefiles/Areas")
 SHP_DIR = Path("Training/Shapefiles/Labels")
@@ -31,6 +32,7 @@ SOURCE_V_SRC_V_DIR = VAL_IMG_DIR / "Source_v/src_v"
 LABELS_V_LBL_V_DIR = VAL_IMG_DIR / "Labels_v/lbl_v"
 PREDICTIONS_V_DIR = VAL_IMG_DIR / "Predictions"
 WEIGHT_PATH = Path("unet_weights.hdf5")
+PLOT_PATH = Path("training_plot.png")
 HISTORY_CSV_PATH = Path("history.csv")
 
 
@@ -39,11 +41,44 @@ def match_images_to_labels_and_bounds(
 ) -> List[Tuple[Path, Path, Path]]:
     """
     Match image files to labels (traces) and bounds (target areas).
+
+    Used to match the images in training/validation folder to
+    corresponding traces (labels) and areas (bounds).
+
+    >>> images = [Path("kl5.png")]
+    ... trace_labels = [Path("kl5_traces.shp")]
+    ... bounds = [Path("kl5_area.shp")]
+    ... match_images_to_labels_and_bounds(images, trace_labels, bounds)
+    [(PosixPath('kl5.png'), PosixPath('kl5_traces.shp'), PosixPath('kl5_area.shp'))]
+
+    With faulty image name:
+
+    >>> images = [Path("kl4.png")]
+    ... trace_labels = [Path("kl5_traces.shp")]
+    ... bounds = [Path("kl5_area.shp")]
+    ... match_images_to_labels_and_bounds(images, trace_labels, bounds)
+    []
+
+    Does not have to be ESRI Shapefiles.
+
+    >>> images = [Path("kl5.png")]
+    ... trace_labels = [Path("kl5_traces.geojson")]
+    ... bounds = [Path("kl5_area.geojson")]
+    ... match_images_to_labels_and_bounds(images, trace_labels, bounds)
+    [(PosixPath('kl5.png'), PosixPath('kl5_traces.geojson'), PosixPath('kl5_area.geojson'))]
     """
     training_list = []
+
+    # Iterate over each image path
     for image in images:
+
+        # Iterate over each traces path
         for label in trace_labels:
+            # Iterate over each area path
             for bound in bounds:
+
+                # Condition is as follows:
+                # image name (stem) must be a subset of the names of traces and area
                 if image.stem in label.name and image.stem in bound.name:
                     training_list.append((image, label, bound))
     return training_list
@@ -60,12 +95,23 @@ def preprocess_images(
     Preprocess training or validation images.
     """
     for ind, (img, geo_file, geo_bounds) in enumerate(training_list):
-        img = ip.open_image(img)
-        geo_data = gpd.GeoDataFrame.from_file(geo_file)
-        geo_area = gpd.GeoDataFrame.from_file(geo_bounds)
 
+        # Open image
+        img = ip.open_image(img)
+
+        # Read traces
+        geo_data = gpd.read_file(geo_file)
+        assert isinstance(geo_data, gpd.GeoDataFrame)
+
+        # Read area (bounds)
+        geo_area = gpd.read_file(geo_bounds)
+        assert isinstance(geo_area, gpd.GeoDataFrame)
+
+        # Resolve rectangular bounds from area
         min_x, min_y, max_x, max_y = geo_area.total_bounds
 
+        # Determine the ratio used to transform trace_width
+        # to the value of slack (buffer value around traces)
         real_to_pixel_ratio = gp.determine_real_to_pixel_ratio(
             image_shape=img.shape,
             min_x=min_x,
@@ -75,16 +121,22 @@ def preprocess_images(
         )
         slack = int(real_to_pixel_ratio * trace_width)
 
+        # Create binary matrix from trace GeoDataFrame
         label_bin_img = gp.geo_dataframe_to_binmat(
             geo_data, img.shape, relative_geo_data=geo_area, slack=slack
         )
 
-        # divide original img (and binary images) into sub images of shape (h, w) and save them
+        # Divide original img (and binary images) into sub images of shape h, w
+        # and save them
         w, h = (cell_size, cell_size)
         sub_imgs = ip.img_segmentation(img, width=w, height=h)
         sub_bin_imgs = ip.img_segmentation(label_bin_img, width=w, height=h)
+
+        # Save images with a running suffix
         suf = 1
         for (im, b) in zip(sub_imgs, sub_bin_imgs):
+
+            # Skip images that are too homogeneous (probably no traces)
             if np.quantile(im, 0.95) == 0 or np.quantile(im, 0.05) == 255:
                 continue
             src_output_path = source_src_dir / f"{ind}_{suf}.png"
@@ -120,9 +172,11 @@ def plot_training_process(
     )
     ax1.legend(loc="upper left")
     ax1.tick_params(axis="y", labelcolor=color)
-    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    # instantiate a second axes that shares the same x-axis
+    ax2 = ax1.twinx()
     color2 = "tab:blue"
-    ax2.set_ylabel("Accuracy", color=color2)  # we already handled the x-label with ax1
+    # we already handled the x-label with ax1
+    ax2.set_ylabel("Accuracy", color=color2)
     ax2.plot(
         np.arange(0, epochs),
         fitted_model.history["accuracy"],
@@ -136,7 +190,8 @@ def plot_training_process(
         color="blue",
     )
     ax2.tick_params(axis="y", labelcolor=color2)
-    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    # Use tigh layout, otherwise the right y-label is slightly clipped
+    fig.tight_layout()
 
     fig.savefig(training_plot_output, bbox_inches="tight")
     plt.close()
@@ -146,6 +201,7 @@ def create_generators(work_dir: Path, data_gen_args: Dict[str, Any], batch_size:
     """
     Create training and validation generators.
     """
+    # training
     train_generator = trainGenerator(
         batch_size=batch_size,
         train_path=work_dir / GEN_DIR,
@@ -155,6 +211,7 @@ def create_generators(work_dir: Path, data_gen_args: Dict[str, Any], batch_size:
         save_to_dir=None,
     )
 
+    # validation
     val_generator = trainGenerator(
         batch_size=batch_size,
         train_path=work_dir / VAL_IMG_DIR,
@@ -166,23 +223,26 @@ def create_generators(work_dir: Path, data_gen_args: Dict[str, Any], batch_size:
     return train_generator, val_generator
 
 
-def collect_targets(work_dir: Path):
+def collect_targets(work_dir: Path, spatial_file_extension: str = "shp"):
     """
     Collect and associate training and validation images.
 
     Associates images to traces (labels) and areas (bounds)
     based on filenames in training and validation directories.
     """
+    # Training paths
     orig_img_dir = work_dir / ORIG_IMG_DIR
     orig_shp_dir = work_dir / SHP_DIR
     shp_bounds_dir = work_dir / SHP_BOUNDS_DIR
 
+    # Validation paths
     org_val_img_dir = work_dir / ORG_VAL_IMG_DIR
     val_shp_dir = work_dir / VAL_SHP_DIR
     val_bound_dir = work_dir / VAL_BOUND_DIR
 
     target_dict = dict()
 
+    # Conduct same process for both sets of paths (training and validation)
     for img_dir, shp_dir, bounds_dir, target in zip(
         (orig_img_dir, org_val_img_dir),
         (orig_shp_dir, val_shp_dir),
@@ -191,9 +251,16 @@ def collect_targets(work_dir: Path):
     ):
 
         images = list(img_dir.glob("*.png")) if img_dir.exists() else []
-        trace_labels = list(shp_dir.glob("*.shp")) if shp_dir.exists() else []
-        bounds = list(bounds_dir.glob("*.shp")) if bounds_dir.exists() else []
+        trace_labels = (
+            list(shp_dir.glob(f"{spatial_file_extension}")) if shp_dir.exists() else []
+        )
+        bounds = (
+            list(bounds_dir.glob(f"{spatial_file_extension}"))
+            if bounds_dir.exists()
+            else []
+        )
 
+        # Match images to traces and areas
         target_list = match_images_to_labels_and_bounds(
             images=images,
             trace_labels=trace_labels,
@@ -201,6 +268,7 @@ def collect_targets(work_dir: Path):
         )
         target_dict[target] = target_list
 
+    # Return two lists, one for training, other for validation
     return target_dict["training"], target_dict["validation"]
 
 
@@ -242,30 +310,37 @@ def train_main(
     new_weight_path: Optional[Path] = None,
     training_plot_output: Optional[Path] = None,
     history_csv_path: Optional[Path] = None,
+    spatial_file_extension: str = "shp",
 ):
     """
     Train model.
 
-    Continues training the model with weights in old_weight_path.
-    If None, starts from scratch and saves it to working directory.
-    New weights will be saved to a file in new_weight_path.
-    If None, it will instead overwrite the old one.
+    Continues training the model with weights in old_weight_path. If None,
+    starts from scratch and saves it to working directory. New weights will be
+    saved to a file in new_weight_path. If None, it will instead overwrite the
+    old one.
     """
-    work_dir = work_dir.absolute()
+    # Resolve full path for safety
+    work_dir = work_dir.resolve()
 
+    # Set default weights path if none given
     if new_weight_path is None:
         new_weight_path = work_dir / WEIGHT_PATH
+
+    # Create model from old weights, if they were given
     model = unet(old_weight_path)
 
     # Associate training and validation images with trace and area data.
     training_list, validation_list = collect_targets(work_dir=work_dir)
 
+    # Check that training and validation targets are found
+    # and correctly associated
     for target_list, target in zip(
         (training_list, validation_list), ("training", "validation")
     ):
         if len(target_list) == 0:
             raise FileNotFoundError(
-                f"Expected to find .png-.shp {target} data combinations."
+                f"Expected to find .png-.{spatial_file_extension} {target} data combinations."
             )
 
     # Create sub-images of both training and validation data in correct directories.
@@ -293,10 +368,12 @@ def train_main(
         batch_size=batch_size,
     )
 
+    # Monitoring validation loss instead of training loss
     model_checkpoint = ModelCheckpoint(
         new_weight_path, monitor="val_loss", mode="min", verbose=1, save_best_only=True
-    )  # BC monitoring validation loss instead of training loss
+    )
 
+    # Fit the model
     fitted_model = model.fit(
         train_generator,
         validation_data=val_generator,
@@ -306,15 +383,15 @@ def train_main(
         callbacks=[model_checkpoint],
     )
 
-    # convert the history.history dict to a pandas DataFrame:
+    # Convert the history.history dict to a pandas DataFrame:
     hist_df_ = pd.DataFrame(fitted_model.history)
-    # save to csv:
+
+    # Save to csv:
     if history_csv_path is None:
         history_csv_path = work_dir / HISTORY_CSV_PATH
     hist_df_.to_csv(history_csv_path)
 
     # model.evaluate(val_generator)
-    # N = 20
 
     # Plot training progress
     if training_plot_output is None:

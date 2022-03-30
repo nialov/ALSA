@@ -27,7 +27,7 @@ def test_crack_main(tmp_path):
         img_path=tests.KL5_TEST_IMAGE,
         area_shp_file_path=list(tests.KL5_TEST_AREA_DIR.glob("*.shp"))[0],
         unet_weights_path=tests.KL5_TEST_WEIGHTS,
-        new_shp_path=traces_path,
+        predicted_output_path=traces_path,
     )
     assert traces_path.exists()
     assert isinstance(result_gdf, gpd.GeoDataFrame)

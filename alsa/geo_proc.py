@@ -3,7 +3,6 @@ Geometry and GIS related utilities.
 """
 import logging
 import math
-import os
 from typing import Callable, List, Tuple
 
 import geopandas as gpd
@@ -12,18 +11,6 @@ from shapely.geometry import LineString, MultiLineString
 from sklearn.preprocessing import minmax_scale
 
 from alsa.crack_maths import line_point_generator, linear_converter
-
-
-# Returns GeoDataFrame from shapely file in geo_path
-def geo_data(geo_path):
-    return gpd.GeoDataFrame.from_file(geo_path)
-
-
-def to_shp(gdf, file_path=None):
-    if file_path is None:
-        file_path = os.getcwd() + "/ACD_GDF.shp"
-
-    gdf.to_file(file_path)
 
 
 def geo_dataframe_to_list(data_frame, polygon=False):
@@ -50,6 +37,19 @@ def geo_dataframe_to_list(data_frame, polygon=False):
 def normalize_slack(unit_vector: np.ndarray, slack: int) -> int:
     """
     Normalize slack based on unit vector of line.
+
+    Maximum normalisation when vector is diagonal:
+
+    >>> normalize_slack(np.array([0.70710678, 0.70710678]), 10)
+    8
+
+    >>> normalize_slack(np.array([0.19611614, 0.98058068]), 10)
+    9
+
+    No normalisation when vector is horizontal or vertical:
+
+    >>> normalize_slack(np.array([0.0, 1]), 10)
+    10
     """
     sqrt_two = 1 / np.sqrt(2)
     max_val = abs(abs(sqrt_two) + abs(sqrt_two))
@@ -77,6 +77,9 @@ def determine_real_to_pixel_ratio(
 ):
     """
     Determine ratio to transform real units to pixels.
+
+    >>> determine_real_to_pixel_ratio((155, 155), 0, 0, 100, 100)
+    1.55
     """
     image_x = image_shape[1]
     image_y = image_shape[0]

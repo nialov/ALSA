@@ -171,7 +171,6 @@ def ridge(
     except SystemExit:
         logging.error(
             f"Caught SystemExit exception from ridge detection. img_path = {img_path}",
-            exc_info=True,
         )
         return [], None
     resultJunction = detect.junctions

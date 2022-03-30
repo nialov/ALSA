@@ -6,18 +6,27 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+from fiona import supported_drivers
 
 from alsa import crack_main, crack_train
 
 APP = typer.Typer()
 
-WORK_DIR_ARG = typer.Argument(..., exists=True, file_okay=False, dir_okay=True)
+WORK_DIR_ARG = typer.Argument(
+    ...,
+    exists=True,
+    file_okay=False,
+    dir_okay=True,
+    help="Working directory. Note that conflicting files are overridden without warning.",
+)
 
 
 class PathEncoder(json.JSONEncoder):
 
     """
     Encoder for pathlib.Path objects.
+
+    Used to print paths as json objects.
     """
 
     def default(self, obj):
@@ -54,15 +63,32 @@ def train(
     epochs: int = typer.Option(100),
     validation_steps: int = typer.Option(10),
     steps_per_epoch: int = typer.Option(10),
-    trace_width: float = typer.Option(0.1),
-    cell_size: int = typer.Option(256),
-    batch_size: int = typer.Option(64),
-    old_weight_path: Optional[Path] = typer.Option(None),
-    new_weight_path: Optional[Path] = typer.Option(None),
-    training_plot_output: Optional[Path] = typer.Option(None),
-    history_csv_path: Optional[Path] = typer.Option(None),
-    quiet: bool = typer.Option(False),
-    dry_run: bool = typer.Option(False),
+    trace_width: float = typer.Option(
+        0.1, help="Width of traces used in training in coordinate system units."
+    ),
+    cell_size: int = typer.Option(256, help="Size of sub-image cell in training."),
+    batch_size: int = typer.Option(64, help="trainGenerator batch size."),
+    old_weight_path: Optional[Path] = typer.Option(
+        None,
+        help=f"Defaults to <work_dir>/{crack_train.WEIGHT_PATH}",
+    ),
+    new_weight_path: Optional[Path] = typer.Option(
+        None,
+        help=f"Defaults to <work_dir>/{crack_train.WEIGHT_PATH}",
+    ),
+    training_plot_output: Optional[Path] = typer.Option(
+        None,
+        help=f"Defaults to <work_dir>/{crack_train.PLOT_PATH}",
+    ),
+    history_csv_path: Optional[Path] = typer.Option(
+        None,
+        help=f"Defaults to <work_dir>/{crack_train.HISTORY_CSV_PATH}",
+    ),
+    quiet: bool = typer.Option(False, help="Control verbosity (prints to stdout)."),
+    dry_run: bool = typer.Option(False, help="Do not train."),
+    spatial_file_extension: str = typer.Option(
+        "shp", help="Give the extension of the input spatial filetype."
+    ),
 ):
     """
     Train model.
@@ -109,28 +135,72 @@ def train(
             new_weight_path=new_weight_path,
             training_plot_output=training_plot_output,
             history_csv_path=history_csv_path,
+            spatial_file_extension=spatial_file_extension,
         )
         typer.echo(f"Finished training in work directory: {work_dir.absolute()}")
     else:
         typer.echo("Finished dry run of training.")
 
 
+def check_driver(driver: str):
+    """
+    Check that driver is supported by fiona.
+    """
+    error = "\n".join(
+        [
+            "Expected driver to be writable by fiona/geopandas.",
+            "See supported drivers and capabilities:",
+            str(json.dumps(supported_drivers, indent=1)),
+            "r=read, w=write, a=append",
+            "Write capability is required.",
+        ]
+    )
+    if driver not in supported_drivers or "w" not in supported_drivers[driver]:
+        raise typer.BadParameter(error)
+    return driver
+
+
 @APP.command()
 def predict(
     work_dir: Path = WORK_DIR_ARG,
-    img_path: Path = typer.Option(..., exists=True, file_okay=True, dir_okay=False),
-    area_shp_file_path: Path = typer.Option(
-        ..., exists=True, file_okay=True, dir_okay=False
+    img_path: Path = typer.Option(
+        ...,
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        help="Path to png-image to predict on.",
+    ),
+    area_file_path: Path = typer.Option(
+        ...,
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        help="Path to area bounds.",
     ),
     unet_weights_path: Path = typer.Option(
-        ..., exists=True, file_okay=True, dir_okay=False
+        ...,
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        help="Path to trained hdf5 weights.",
     ),
-    new_shp_path: Path = typer.Option(..., file_okay=True, dir_okay=False),
-    width: int = typer.Option(256),
-    height: int = typer.Option(256),
-    dry_run: bool = typer.Option(False),
+    predicted_output_path: Path = typer.Option(
+        ..., file_okay=True, dir_okay=False, help="Path to predicted traces output."
+    ),
+    width: int = typer.Option(256, help="Height of sub-images."),
+    height: int = typer.Option(256, help="Height of sub-images."),
+    dry_run: bool = typer.Option(False, help="Do not run prediction."),
     override_ridge_config_path: Optional[Path] = typer.Option(
-        None, exists=True, dir_okay=False
+        None,
+        exists=True,
+        dir_okay=False,
+        help="The ridge detections config can be overridden by passing a json file with wanted configuration.",
+    ),
+    quiet: bool = typer.Option(False, help="Control verbosity (prints to stdout)."),
+    driver: str = typer.Option(
+        "ESRI Shapefile",
+        callback=check_driver,
+        help="Choose spatial driver for output file.",
     ),
 ):
     """
@@ -140,8 +210,11 @@ def predict(
     typer.echo("Starting prediction.")
 
     if dry_run:
+        # These are useful for simple tests of the command-line interface
         return
 
+    # The ridge detections config can be overridden
+    # by passing a json file with wanted configuration.
     if override_ridge_config_path is None:
         override_ridge_configs = dict()
     else:
@@ -150,12 +223,14 @@ def predict(
     crack_main.crack_main(
         work_dir=work_dir,
         img_path=img_path,
-        area_shp_file_path=area_shp_file_path,
+        area_file_path=area_file_path,
         unet_weights_path=unet_weights_path,
-        new_shp_path=new_shp_path,
+        predicted_output_path=predicted_output_path,
         width=width,
         height=height,
         override_ridge_configs=override_ridge_configs,
+        verbose=not quiet,
+        driver=driver,
     )
 
 
