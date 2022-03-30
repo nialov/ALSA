@@ -22,6 +22,7 @@
             pastel
             zlib
             nixFlakes
+            dos2unix
           ];
 
           # Required for building C extensions
