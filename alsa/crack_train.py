@@ -166,7 +166,7 @@ def create_generators(work_dir: Path, data_gen_args: Dict[str, Any], batch_size:
     return train_generator, val_generator
 
 
-def setup_training(work_dir: Path):
+def collect_targets(work_dir: Path):
     """
     Collect and associate training and validation images.
 
@@ -174,40 +174,34 @@ def setup_training(work_dir: Path):
     based on filenames in training and validation directories.
     """
     orig_img_dir = work_dir / ORIG_IMG_DIR
-    shp_dir = work_dir / SHP_DIR
+    orig_shp_dir = work_dir / SHP_DIR
     shp_bounds_dir = work_dir / SHP_BOUNDS_DIR
-
-    training_images = list(orig_img_dir.glob("*.png"))
-    training_trace_labels = list(shp_dir.glob("*.shp"))
-    training_bounds = list(shp_bounds_dir.glob("*.shp"))
-
-    training_list = match_images_to_labels_and_bounds(
-        images=training_images,
-        trace_labels=training_trace_labels,
-        bounds=training_bounds,
-    )
-    print(training_list)
-
-    assert len(training_list) > 0, "Could not find any .png-.shp file pairs."
 
     org_val_img_dir = work_dir / ORG_VAL_IMG_DIR
     val_shp_dir = work_dir / VAL_SHP_DIR
     val_bound_dir = work_dir / VAL_BOUND_DIR
 
-    validation_images = list(org_val_img_dir.glob("*.png"))
-    validation_trace_labels = list(val_shp_dir.glob("*.shp"))
-    validation_bounds = list(val_bound_dir.glob("*.shp"))
+    target_dict = dict()
 
-    validation_list = match_images_to_labels_and_bounds(
-        images=validation_images,
-        trace_labels=validation_trace_labels,
-        bounds=validation_bounds,
-    )
-    print(validation_list)
+    for img_dir, shp_dir, bounds_dir, target in zip(
+        (orig_img_dir, org_val_img_dir),
+        (orig_shp_dir, val_shp_dir),
+        (shp_bounds_dir, val_bound_dir),
+        ("training", "validation"),
+    ):
 
-    assert len(validation_list) > 0, "Could not find any .png-.shp file pairs."
+        images = list(img_dir.glob("*.png")) if img_dir.exists() else []
+        trace_labels = list(shp_dir.glob("*.shp")) if shp_dir.exists() else []
+        bounds = list(bounds_dir.glob("*.shp")) if bounds_dir.exists() else []
 
-    return training_list, validation_list
+        target_list = match_images_to_labels_and_bounds(
+            images=images,
+            trace_labels=trace_labels,
+            bounds=bounds,
+        )
+        target_dict[target] = target_list
+
+    return target_dict["training"], target_dict["validation"]
 
 
 def preprocess_training_and_validation(
@@ -264,7 +258,15 @@ def train_main(
     model = unet(old_weight_path)
 
     # Associate training and validation images with trace and area data.
-    training_list, validation_list = setup_training(work_dir=work_dir)
+    training_list, validation_list = collect_targets(work_dir=work_dir)
+
+    for target_list, target in zip(
+        (training_list, validation_list), ("training", "validation")
+    ):
+        if len(target_list) == 0:
+            raise FileNotFoundError(
+                f"Expected to find .png-.shp {target} data combinations."
+            )
 
     # Create sub-images of both training and validation data in correct directories.
     preprocess_training_and_validation(
@@ -357,9 +359,3 @@ def train_directory_setup(work_dir: Path = Path(".")):
             # Remove directory with generated training data
             shutil.rmtree(dir_path)
         dir_path.mkdir(parents=True, exist_ok=True)
-
-
-# if __name__ == "__main__":
-#     work_dir = Path(".")
-#     train_setup(work_dir=work_dir)
-#     train_main(work_dir=work_dir)

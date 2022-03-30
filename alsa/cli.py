@@ -11,6 +11,8 @@ from alsa import crack_main, crack_train
 
 APP = typer.Typer()
 
+WORK_DIR_ARG = typer.Argument(..., exists=True, file_okay=False, dir_okay=True)
+
 
 class PathEncoder(json.JSONEncoder):
 
@@ -29,9 +31,26 @@ class PathEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
+def report_target_lists(work_dir: Path):
+    """
+    Report training and validation targets.
+    """
+    # Gathered here just for reporting to the user.
+    # Are gathered again in `train_main` function.
+    training_list, validation_list = crack_train.collect_targets(work_dir=work_dir)
+
+    for target_list, name in zip(
+        (training_list, validation_list), ("Training", "Validation")
+    ):
+
+        # Convert to json for more human-readable printing
+        list_json = json.dumps(target_list, indent=1, cls=PathEncoder)
+        typer.echo(f"{name} data pairs: {list_json}")
+
+
 @APP.command()
 def train(
-    work_dir: Path = typer.Argument(..., exists=True, file_okay=False, dir_okay=True),
+    work_dir: Path = WORK_DIR_ARG,
     epochs: int = typer.Option(100),
     validation_steps: int = typer.Option(10),
     steps_per_epoch: int = typer.Option(10),
@@ -57,17 +76,7 @@ def train(
         crack_train.train_directory_setup(work_dir=work_dir)
 
     if not quiet:
-        # Gathered here just for reporting to the user.
-        # Are gathered again in `train_main` function.
-        training_list, validation_list = crack_train.setup_training(work_dir=work_dir)
-
-        for target_list, name in zip(
-            (training_list, validation_list), ("Training", "Validation")
-        ):
-
-            # Convert to json for more human-readable printing
-            list_json = json.dumps(target_list, indent=1, cls=PathEncoder)
-            typer.echo(f"{name} data pairs: {list_json}")
+        report_target_lists(work_dir=work_dir)
 
     # Report input parameters as json
     relevant_input_params = json.dumps(
@@ -81,7 +90,8 @@ def train(
         ),
         indent=1,
     )
-    typer.echo(relevant_input_params)
+    if not quiet:
+        typer.echo(relevant_input_params)
 
     # Start training
     typer.echo("Starting training.")
@@ -107,7 +117,7 @@ def train(
 
 @APP.command()
 def predict(
-    work_dir: Path = typer.Argument(..., exists=True, file_okay=False, dir_okay=True),
+    work_dir: Path = WORK_DIR_ARG,
     img_path: Path = typer.Option(..., exists=True, file_okay=True, dir_okay=False),
     area_shp_file_path: Path = typer.Option(
         ..., exists=True, file_okay=True, dir_okay=False
@@ -137,3 +147,16 @@ def predict(
         width=width,
         height=height,
     )
+
+
+@APP.command()
+def check(
+    work_dir: Path = WORK_DIR_ARG,
+    setup_dirs: bool = typer.Option(False, help="Create target directories."),
+):
+    """
+    Check training and validation targets and report to user.
+    """
+    report_target_lists(work_dir=work_dir)
+    if setup_dirs:
+        crack_train.train_directory_setup(work_dir=work_dir)
