@@ -3,7 +3,7 @@ name = "alsa"
 version = "0.0.1"
 description = "Automated Trace Extraction"
 authors = ["nialov <nikolasovaskainen@gmail.com>"]
-readme = "README.md"
+readme = "README.rst"
 license = "MIT"
 # Make sure hyphens/underscores are correct in urls
 homepage = "https://github.com/nialov/alsa"
