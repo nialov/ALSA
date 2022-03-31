@@ -89,7 +89,7 @@ Example prediction workflow:
    unet_weights_path = Path("C:/alsa-working-directory/unet_weights.hdf5")
 
    # Path to predicted traces output
-   unet_weights_path = Path("C:/alsa-working-directory/predicted_traces.shp")
+   predicted_output_path = Path("C:/alsa-working-directory/predicted_traces.shp")
 
    # Run prediction
    crack_main.crack_main(
