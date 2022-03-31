@@ -48,8 +48,9 @@ def match_images_to_labels_and_bounds(
     >>> images = [Path("kl5.png")]
     >>> trace_labels = [Path("kl5_traces.shp")]
     >>> bounds = [Path("kl5_area.shp")]
-    >>> match_images_to_labels_and_bounds(images, trace_labels, bounds)
-    [(PosixPath('kl5.png'), PosixPath('kl5_traces.shp'), PosixPath('kl5_area.shp'))]
+    >>> results = match_images_to_labels_and_bounds(images, trace_labels, bounds)
+    >>> print(list(map(str, results[0])))
+    ['kl5.png', 'kl5_traces.shp', 'kl5_area.shp']
 
     With faulty image name:
 
@@ -64,8 +65,9 @@ def match_images_to_labels_and_bounds(
     >>> images = [Path("kl5.png")]
     >>> trace_labels = [Path("kl5_traces.geojson")]
     >>> bounds = [Path("kl5_area.geojson")]
-    >>> match_images_to_labels_and_bounds(images, trace_labels, bounds)
-    [(PosixPath('kl5.png'), PosixPath('kl5_traces.geojson'), PosixPath('kl5_area.geojson'))]
+    >>> results = match_images_to_labels_and_bounds(images, trace_labels, bounds)
+    >>> print(list(map(str, results[0])))
+    ['kl5.png', 'kl5_traces.geojson', 'kl5_area.geojson']
     """
     target_list = []
 
