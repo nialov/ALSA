@@ -3,6 +3,12 @@ name: ci
 on:
   # run on all pushes to any branch
   push:
+    paths:
+      # Only run on changes to source or test python files build files
+      - "alsa/**.py"
+      - "tests/**.py"
+      - "environment.yml"
+      - "pyproject.toml"
 
 jobs:
   conda-pytest:
