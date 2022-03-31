@@ -64,7 +64,7 @@ def train(
     validation_steps: int = typer.Option(10),
     steps_per_epoch: int = typer.Option(10),
     trace_width: float = typer.Option(
-        0.1, help="Width of traces used in training in coordinate system units."
+        0.01, help="Width of traces used in training in coordinate system units."
     ),
     cell_size: int = typer.Option(256, help="Size of sub-image cell in training."),
     batch_size: int = typer.Option(64, help="trainGenerator batch size."),
