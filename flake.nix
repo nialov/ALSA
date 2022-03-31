@@ -13,7 +13,7 @@
         mkShell rec {
           buildInputs = [
             poetry
-            python38
+            python39
             pre-commit
             pandoc
             git
@@ -23,21 +23,25 @@
             zlib
             nixFlakes
             dos2unix
+            expat
+            # cudnn_8_3_cudatoolkit_11_5
           ];
 
           # Required for building C extensions
-          LD_LIBRARY_PATH = "${stdenv.cc.cc.lib}/lib:${zlib}/lib";
+          LD_LIBRARY_PATH =
+            # "${stdenv.cc.cc.lib}/lib:${zlib}/lib:${expat}/lib:${cudnn_8_3_cudatoolkit_11_5.cudatoolkit.lib}/lib";
+            "${stdenv.cc.cc.lib}/lib:${zlib}/lib:${expat}/lib";
           # Certificates for secure connections for e.g. pip downloads
           GIT_SSL_CAINFO = "${cacert}/etc/ssl/certs/ca-bundle.crt";
           SSL_CERT_FILE = "${cacert}/etc/ssl/certs/ca-bundle.crt";
           CURL_CA_BUNDLE = "${cacert}/etc/ssl/certs/ca-bundle.crt";
           # Required to fully use the python environments
-          PYTHON38PATH = "${python38}/lib/python3.8/site-packages";
+          PYTHON39PATH = "${python39}/lib/python3.9/site-packages";
           # PYTHONPATH is overridden with contents from e.g. poetry */site-package.
           # We do not want them to be in PYTHONPATH.
           # Therefore, in ./.envrc PYTHONPATH is set to the _PYTHONPATH defined below
           # and also in shellHooks (direnv does not load shellHook exports, always).
-          _PYTHONPATH = "${PYTHON38PATH}";
+          _PYTHONPATH = "${PYTHON39PATH}";
 
           envrc_contents = ''
             use flake
@@ -55,6 +59,19 @@
           '';
         };
     in (flake-utils.lib.eachDefaultSystem (system:
-      let pkgs = nixpkgs.legacyPackages."${system}";
-      in { devShell = mkshell pkgs; }));
+      let
+        unfree_nixpkgs = import nixpkgs {
+          config = { allowUnfree = true; };
+          inherit system;
+        };
+        # pkgs = unfree_nixpkgs.legacyPackages."${system}";
+        # # Helper function to set allowUnfree for nixpkgs
+        # setup_pkgs = { pkgs }:
+        # import pkgs {
+        # inherit system;
+        # config = { allowUnfree = true; };
+        # };
+        # pkgs_unfree = setup_pkgs { inherit pkgs; };
+
+      in { devShell = mkshell unfree_nixpkgs; }));
 }
