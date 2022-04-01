@@ -2,7 +2,7 @@
 Tests for crack_main.py.
 """
 import os
-from warnings import warn
+from pathlib import Path
 
 import geopandas as gpd
 import pytest
@@ -41,3 +41,38 @@ def test_crack_main(tmp_path):
     assert all(
         isinstance(geom, (LineString, MultiLineString)) for geom in gdf.geometry.values
     )
+
+
+@pytest.mark.parametrize(
+    "override_ridge_config_path", tests.test_resolve_ridge_config_overrides_params()
+)
+def test_resolve_ridge_config_overrides(override_ridge_config_path, tmp_path):
+    """
+    Test resolve_ridge_config_overrides.
+    """
+    result = crack_main.resolve_ridge_config_overrides(
+        override_ridge_config_path=override_ridge_config_path,
+        work_dir=tmp_path,
+    )
+
+    assert isinstance(result, dict)
+
+    if override_ridge_config_path is None:
+        assert len(result) == 0
+    else:
+        assert len(result) > 0
+
+
+def test_resolve_ridge_config_overrides_default(tmp_path: Path):
+    """
+    Test resolve_ridge_config_overrides.
+    """
+    override_ridge_config_path = tmp_path / tests.SAMPLE_RIDGE_CONFIG_PATH.name
+    override_ridge_config_path.write_text(tests.SAMPLE_RIDGE_CONFIG_PATH.read_text())
+    result = crack_main.resolve_ridge_config_overrides(
+        override_ridge_config_path=None,
+        work_dir=tmp_path,
+    )
+
+    assert isinstance(result, dict)
+    assert len(result) > 0
