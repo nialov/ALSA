@@ -171,7 +171,8 @@ def ridge(
         result = detect.detectLines(img)
     except (SystemExit, NameError) as exc:
         logging.error(
-            f"Caught {exc} exception from ridge detection. img_path = {img_path}",
+            f"Caught {exc} SystemExit/NameError from ridge detection.a "
+            f"img_path = {img_path}",
         )
         return [], None
     resultJunction = detect.junctions

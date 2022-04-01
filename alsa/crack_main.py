@@ -17,6 +17,8 @@ from alsa.data import save_result, testGenerator
 from alsa.model import unet
 
 RIDGE_CONFIG_PATH = Path("ridge_config.json")
+SUB_IMGS_PATH = "sub_imgs"
+PREDICTIONS_PATH = "predictions"
 
 
 def resolve_ridge_config_overrides(
@@ -79,8 +81,8 @@ def crack_main(
     n_mats = n_mats_per_row * n_mats_per_col
 
     # Create sub-image and prediction directories in working directory
-    sub_imgs_dir = work_dir / "sub_imgs"
-    predictions_dir = work_dir / "predictions"
+    sub_imgs_dir = work_dir / SUB_IMGS_PATH
+    predictions_dir = work_dir / PREDICTIONS_PATH
     for dir_path in (sub_imgs_dir, predictions_dir):
         dir_path.mkdir(exist_ok=True, parents=True)
 
