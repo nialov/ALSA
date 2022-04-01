@@ -13,7 +13,7 @@ import numpy as np
 import alsa.image_proc as ip
 import alsa.signal_proc as sp
 from alsa.crack_cls import CrackNetWork
-from alsa.data import saveResult, testGenerator
+from alsa.data import save_result, testGenerator
 from alsa.model import unet
 
 RIDGE_CONFIG_PATH = Path("ridge_config.json")
@@ -106,7 +106,12 @@ def crack_main(
     results = model.predict_generator(img_generator, n_mats, verbose=1)
 
     # Save prediction images to predictions dir
-    saveResult(predictions_dir, results)
+    save_result(
+        predictions_dir,
+        results,
+        n_mats_per_col=n_mats_per_col,
+        n_mats_per_row=n_mats_per_row,
+    )
 
     # Start post-processing (ridge detection) from the predicted data
     nworks = list()

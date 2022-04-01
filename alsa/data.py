@@ -3,6 +3,8 @@ Data utilities.
 """
 import glob
 import os
+from pathlib import Path
+from typing import Callable, Dict, List
 
 import numpy as np
 import skimage.io as io
@@ -38,6 +40,8 @@ COLOR_DICT = np.array(
         Unlabelled,
     ]
 )
+
+MOSAIC_PREDICT_PATH = Path("mosaic_predict.png")
 
 
 def lin_normalize(array):
@@ -210,22 +214,60 @@ def labelVisualize(num_class, color_dict, img):
     return img_out / 255
 
 
-def saveResult(
-    save_path,
-    npyfile,
-    flag_multi_class=False,
-    num_class=2,
-    normalize=True,
-    norm_func=lin_normalize,
+def save_result(
+    save_path: Path,
+    array: np.ndarray,
+    n_mats_per_row: int,
+    n_mats_per_col: int,
+    flag_multi_class: bool = False,
+    num_class: int = 2,
+    normalize: bool = True,
+    norm_func: Callable = lin_normalize,
 ):
-    for i, item in enumerate(npyfile):
+    assert len(array) == n_mats_per_row * n_mats_per_col
+    assert isinstance(array, np.ndarray)
+
+    # Gather predicted sub-images to a dictionary
+    # Results are an array with a dimension of 1
+    # however the results can be parsed back together
+    # into a single mosaic
+    row_idx = 1
+    mosaic_dict: Dict[int, List[np.ndarray]] = dict()
+
+    # Iterate over results
+    for i, item in enumerate(array):
+
+        if i == n_mats_per_row * row_idx:
+            row_idx += 1
+
+        assert isinstance(item, np.ndarray)
         img = (
             labelVisualize(num_class, COLOR_DICT, item)
             if flag_multi_class
             else item[:, :, 0]
         )
+        assert isinstance(img, np.ndarray)
         if normalize and (norm_func is not None):
             img = norm_func(img)
         img = img.astype("uint8")
         # io.imsave(os.path.join(save_path,"%d_predict.png"%i),img)
-        io.imsave(save_path / f"{i}_predict.png", img)
+        img_path = save_path / f"{i}_predict.png"
+
+        # Save predicted sub-image
+        io.imsave(img_path, img)
+
+        # Gather predicted sub-image for concatenation into mosaic later
+        if row_idx in mosaic_dict:
+            mosaic_dict[row_idx].append(img)
+        else:
+            mosaic_dict[row_idx] = list()
+
+    # Create mosaic of sub-images
+    rows = []
+    for row in mosaic_dict.values():
+        rows.append(np.concatenate(row, axis=1))
+    mosaic_array = np.concatenate(rows)
+
+    # Save mosaic
+    mosaic_path = save_path / MOSAIC_PREDICT_PATH
+    io.imsave(mosaic_path, mosaic_array)
