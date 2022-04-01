@@ -12,7 +12,7 @@ from click.testing import Result
 from typer.testing import CliRunner
 
 import tests
-from alsa import cli, crack_train
+from alsa import cli, crack_main, crack_train
 from tests.test_crack_train import add_kl5_training_data
 
 RUNNER = CliRunner()
@@ -218,7 +218,7 @@ def test_train_and_predict(setup_train_test):
     """
     Test training and prediction.
     """
-    tmp_path = setup_train_test
+    tmp_path: Path = setup_train_test
 
     # Training
     cell_size = 512
@@ -242,8 +242,10 @@ def test_train_and_predict(setup_train_test):
     assert unet_weights_path.exists()
 
     new_shp_path = tmp_path / "predicted_traces.shp"
+    predictions_dir_path = tmp_path / crack_main.PREDICTIONS_PATH
 
     assert not new_shp_path.exists()
+    assert not predictions_dir_path.exists()
     args = [
         "predict",
         str(tmp_path),
@@ -260,12 +262,19 @@ def test_train_and_predict(setup_train_test):
 
     click_error_print(result)
 
-    assert new_shp_path.exists()
+    assert predictions_dir_path.exists() and predictions_dir_path.is_dir()
 
-    gdf = gpd.read_file(new_shp_path)
+    # Should contain mosaic and predicted sub-images
+    assert len(list(predictions_dir_path.glob("*.png"))) > 1
 
-    assert isinstance(gdf, gpd.GeoDataFrame)
-    assert gdf.shape[0] > 0
+    if new_shp_path.exists():
+        # Prediction and training might not always result
+        # in actual found traces
+
+        gdf = gpd.read_file(new_shp_path)
+
+        assert isinstance(gdf, gpd.GeoDataFrame)
+        assert gdf.shape[0] > 0
 
 
 @pytest.mark.parametrize("setup_dirs", [True, False])
