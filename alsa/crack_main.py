@@ -5,7 +5,7 @@ import json
 import logging
 import math
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import geopandas as gpd
 import numpy as np
@@ -34,12 +34,12 @@ def resolve_ridge_config_overrides(
         override_ridge_config_path = work_dir / RIDGE_CONFIG_PATH
 
     if override_ridge_config_path.exists():
-        override_ridge_configs = json.loads(override_ridge_config_path.read_text())
+        override_ridge_config = json.loads(override_ridge_config_path.read_text())
     else:
         logging.info(f"Found no ridge config overrides at {override_ridge_config_path}")
-        override_ridge_configs = dict()
-    assert isinstance(override_ridge_configs, dict)
-    return override_ridge_configs
+        override_ridge_config = dict()
+    assert isinstance(override_ridge_config, dict)
+    return override_ridge_config
 
 
 def crack_main(
@@ -48,15 +48,20 @@ def crack_main(
     area_file_path: Path,
     unet_weights_path: Path,
     predicted_output_path: Path,
-    override_ridge_config_path: Optional[Path] = None,
+    override_ridge_config: Union[dict, Optional[Path]] = None,
     width: int = 256,
     height: int = 256,
     verbose: bool = True,
     driver: str = "ESRI Shapefile",
 ):
-    override_ridge_configs = resolve_ridge_config_overrides(
-        override_ridge_config_path=override_ridge_config_path, work_dir=work_dir
-    )
+
+    # Resolve overrides to ridge-detection
+    if isinstance(override_ridge_config, Path) or override_ridge_config is None:
+        override_ridge_config = resolve_ridge_config_overrides(
+            override_ridge_config_path=override_ridge_config, work_dir=work_dir
+        )
+    assert isinstance(override_ridge_config, dict)
+
     # Open image to predict on
     sub_imgs = ip.open_image(img_path)
 
@@ -133,7 +138,7 @@ def crack_main(
                 im_path,
                 saved_img_dir=work_dir,
                 img_shape=(width, height),
-                override_ridge_configs=override_ridge_configs,
+                override_ridge_config=override_ridge_config,
             )
 
             # Create CrackNetWork and process detected into vector traces

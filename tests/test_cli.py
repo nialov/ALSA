@@ -8,7 +8,8 @@ from traceback import print_tb
 
 import geopandas as gpd
 import pytest
-from typer.testing import CliRunner, Result
+from click.testing import Result
+from typer.testing import CliRunner
 
 import tests
 from alsa import cli, crack_train
@@ -285,7 +286,7 @@ def test_cli_check(tmp_path: Path, setup_dirs: bool):
     assert not orig_img_dir.exists()
     assert not val_img_dir.exists()
 
-    # Call predict cli interface
+    # Call check cli interface
     result = RUNNER.invoke(cli.APP, args)
 
     click_error_print(result)

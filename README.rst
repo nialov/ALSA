@@ -164,6 +164,13 @@ Example prediction workflow:
    # Path to predicted traces output
    predicted_output_path = Path("C:/alsa-working-directory/predicted_traces.shp")
 
+   # ridge-detection configuration can be overridden
+   # see alsa.signal_proc.DEFAULT_RIDGE_CONFIG
+   # for default values
+   override_ridge_config = {
+         "optional_parameters": {"Line_width": 3}
+   }
+
    # Run prediction
    crack_main.crack_main(
        work_dir=work_dir,
@@ -173,7 +180,7 @@ Example prediction workflow:
        predicted_output_path=predicted_output_path,
        width=256,
        height=256,
-       override_ridge_configs=dict(),
+       override_ridge_config=override_ridge_config,
    )
 
    # Predicted traces are found at predicted_output_path
@@ -250,6 +257,32 @@ go to ``C:\alsa-working-directory\predicted_traces.shp``:
            --area-file-path  C:\alsa-working-directory\bounds.shp \
            --unet-weights-path C:\alsa-working-directory\unet_weights.hdf5 \
            --predicted-output-path C:\alsa-working-directory\predicted_traces.shp
+
+Furthermore, if the working directory contains a ``ridge_config.json`` file, it
+will be read for configuration of ``ridge-detection``. See below:
+
+Prediction ridge-detection Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Both from the Python and command-line interface you can pass configuration to
+the post-processing ``ridge-detection`` functions calls. You can create a
+``json`` file with the wanted configuration overrides. Passing a file rather
+than command-line options was chosen as the configuration that can be passed to
+``ridge-detection`` is extensive. See ``alsa.signal_proc.DEFAULT_RIDGE_CONFIG``
+for the default config that is passed to ``ridge-detection``. New options can
+be set or old ones overridden within a ``json`` file, e.g.
+
+.. code:: json
+
+   {
+     "optional_parameters": {
+       "Line_width": 15
+     }
+   }
+
+By default this configuration is looked for in
+``<work_dir>/ridge_config.json``. If it is missing the default
+configuration (``DEFAULT_RIDGE_CONFIG``) is used without overrides.
 
 Usage (old & partly deprecated)
 -------------------------------
@@ -377,3 +410,9 @@ Proposed improvements by Nikolas (2022)
    easy when installing with ``pip`` (or ``poetry``) but less
    so when using ``conda``. Dependency specification in ``pyproject.toml``
    must match ``conda`` environment.
+
+-  Configuration for training and prediction can be passed
+   from command-line and from a ``json`` file for ridge-detection
+   post-processing. Maybe all configuration could
+   be passed from a single ``json`` file? Currently there's
+   opportunity for confusion...

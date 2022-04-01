@@ -14,7 +14,7 @@ from skimage.filters import gabor_kernel
 
 import alsa.image_proc as ip
 
-DEFAULT_RIDGE_CONFIGS = {
+DEFAULT_RIDGE_CONFIG = {
     # "path_to_file": img_path,
     "mandatory_parameters": {
         # "Sigma": 3.39,
@@ -143,30 +143,30 @@ def avg_denoise(array, pixels=3):
     return to_return
 
 
-def resolve_ridge_config(img_path: str, override_ridge_configs: dict) -> dict:
+def resolve_ridge_config(img_path: str, override_ridge_config: dict) -> dict:
     """
     Resolve final ridge detection configuration.
     """
-    ridge_configs = DEFAULT_RIDGE_CONFIGS
-    ridge_configs["path_to_file"] = img_path
+    ridge_config = DEFAULT_RIDGE_CONFIG
+    ridge_config["path_to_file"] = img_path
 
-    ridge_configs = update(ridge_configs, override_ridge_configs)
-    return ridge_configs
+    ridge_config = update(ridge_config, override_ridge_config)
+    return ridge_config
 
 
 def ridge(
-    img_path, saved_img_dir, override_ridge_configs: dict, save_on_file: bool = False
+    img_path, saved_img_dir, override_ridge_config: dict, save_on_file: bool = False
 ):
 
-    ridge_configs = resolve_ridge_config(
-        img_path=img_path, override_ridge_configs=override_ridge_configs
+    ridge_config = resolve_ridge_config(
+        img_path=img_path, override_ridge_config=override_ridge_config
     )
 
-    params = Params(ridge_configs)
+    params = Params(ridge_config)
 
     img = ip.open_image(img_path, asarray=False)
 
-    detect = LineDetector(params=ridge_configs)
+    detect = LineDetector(params=ridge_config)
     try:
         result = detect.detectLines(img)
     except (SystemExit, NameError) as exc:
@@ -377,7 +377,7 @@ def calculate_ridge_points(line_o, max_length=80):
 def ridge_fit(
     img_path,
     saved_img_dir,
-    override_ridge_configs: dict,
+    override_ridge_config: dict,
     img_shape: Tuple[int, int] = (256, 256),
     slack: int = 1,
     save_on_file: bool = False,
@@ -385,7 +385,7 @@ def ridge_fit(
     coords, _ = ridge(
         img_path=img_path,
         saved_img_dir=saved_img_dir,
-        override_ridge_configs=override_ridge_configs,
+        override_ridge_config=override_ridge_config,
         save_on_file=save_on_file,
     )
     line_coords_list = list()

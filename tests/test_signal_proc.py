@@ -8,7 +8,7 @@ from alsa import signal_proc
 
 
 @pytest.mark.parametrize(
-    "img_path,override_ridge_configs",
+    "img_path,override_ridge_config",
     [
         ("image.png", {}),
         (
@@ -20,18 +20,18 @@ from alsa import signal_proc
         ),
     ],
 )
-def test_resolve_ridge_config(img_path, override_ridge_configs: dict):
+def test_resolve_ridge_config(img_path, override_ridge_config: dict):
     """
     Test resolve_ridge_config.
     """
     result = signal_proc.resolve_ridge_config(
-        img_path=img_path, override_ridge_configs=override_ridge_configs
+        img_path=img_path, override_ridge_config=override_ridge_config
     )
 
     assert isinstance(result, dict)
     assert result["path_to_file"] == img_path
 
-    for key, value in override_ridge_configs.items():
+    for key, value in override_ridge_config.items():
         assert key in result
         assert type(value) == type(result[key])
         if isinstance(result[key], dict) and isinstance(value, dict):

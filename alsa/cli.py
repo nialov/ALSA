@@ -227,7 +227,7 @@ def predict(
         height=height,
         # The ridge detections config can be overridden
         # by passing a json file with wanted configuration.
-        override_ridge_config_path=override_ridge_config_path,
+        override_ridge_config=override_ridge_config_path,
         verbose=not quiet,
         driver=driver,
     )
