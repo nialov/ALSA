@@ -194,7 +194,11 @@ def predict(
         None,
         exists=True,
         dir_okay=False,
-        help="The ridge detections config can be overridden by passing a json file with wanted configuration.",
+        help=(
+            "The ridge detections config can be overridden by passing a"
+            " json file with wanted configuration."
+            " By default will use <work_dir>/ridge_config.json if found."
+        ),
     ),
     quiet: bool = typer.Option(False, help="Control verbosity (prints to stdout)."),
     driver: str = typer.Option(
@@ -213,13 +217,6 @@ def predict(
         # These are useful for simple tests of the command-line interface
         return
 
-    # The ridge detections config can be overridden
-    # by passing a json file with wanted configuration.
-    if override_ridge_config_path is None:
-        override_ridge_configs = dict()
-    else:
-        override_ridge_configs = json.loads(override_ridge_config_path.read_text())
-
     crack_main.crack_main(
         work_dir=work_dir,
         img_path=img_path,
@@ -228,7 +225,9 @@ def predict(
         predicted_output_path=predicted_output_path,
         width=width,
         height=height,
-        override_ridge_configs=override_ridge_configs,
+        # The ridge detections config can be overridden
+        # by passing a json file with wanted configuration.
+        override_ridge_config_path=override_ridge_config_path,
         verbose=not quiet,
         driver=driver,
     )

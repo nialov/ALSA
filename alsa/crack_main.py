@@ -1,9 +1,11 @@
 """
 Main entrypoint for prediction using trained model.
 """
+import json
 import logging
 import math
 from pathlib import Path
+from typing import Optional
 
 import geopandas as gpd
 import numpy as np
@@ -14,6 +16,31 @@ from alsa.crack_cls import CrackNetWork
 from alsa.data import saveResult, testGenerator
 from alsa.model import unet
 
+RIDGE_CONFIG_PATH = Path("ridge_config.json")
+
+
+def resolve_ridge_config_overrides(
+    override_ridge_config_path: Optional[Path],
+    work_dir: Path,
+) -> dict:
+    """
+    Resolve ridge config override dictionary.
+
+    If a ``Path`` is inputted, tries to load json from that path. If None is
+    given, tries to find config in default location in ``work_dir`` and load
+    the json from there.
+    """
+    if override_ridge_config_path is None:
+        override_ridge_config_path = work_dir / RIDGE_CONFIG_PATH
+
+    if override_ridge_config_path.exists():
+        override_ridge_configs = json.loads(override_ridge_config_path.read_text())
+    else:
+        logging.info(f"Found no ridge config overrides at {override_ridge_config_path}")
+        override_ridge_configs = dict()
+    assert isinstance(override_ridge_configs, dict)
+    return override_ridge_configs
+
 
 def crack_main(
     work_dir: Path,
@@ -21,12 +48,15 @@ def crack_main(
     area_file_path: Path,
     unet_weights_path: Path,
     predicted_output_path: Path,
+    override_ridge_config_path: Optional[Path] = None,
     width: int = 256,
     height: int = 256,
-    override_ridge_configs: dict = dict(),
     verbose: bool = True,
     driver: str = "ESRI Shapefile",
 ):
+    override_ridge_configs = resolve_ridge_config_overrides(
+        override_ridge_config_path=override_ridge_config_path, work_dir=work_dir
+    )
     # Open image to predict on
     sub_imgs = ip.open_image(img_path)
 
