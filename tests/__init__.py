@@ -8,6 +8,8 @@ from pathlib import Path
 from shutil import copy
 from typing import Tuple
 
+import numpy as np
+
 KL5_TEST_DATA_DIR = Path("tests/sample_data/kl5_test_data")
 
 KL5_TEST_AREA_DIR = KL5_TEST_DATA_DIR / "area/"
@@ -76,4 +78,27 @@ def test_resolve_ridge_config_overrides_params():
     return [
         None,
         SAMPLE_RIDGE_CONFIG_PATH,
+    ]
+
+
+def test_save_result_params():
+    arr = np.array(
+        [
+            [(0.5, 0.5, 0.1), (0.5, 0.5, 0.5)],
+            [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
+        ]
+    )
+    return [
+        (
+            np.array(
+                [
+                    arr,
+                    arr,
+                    arr,
+                    arr,
+                ]
+            ),
+            2,
+            2,
+        ),
     ]
