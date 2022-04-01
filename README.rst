@@ -50,6 +50,33 @@ The installation with ``poetry`` likely only works on ``linux``-systems.
 Usage
 -----
 
+Training and Validation data setup
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Training and validation data for training are given by putting ``png``-images,
+traces (labels) and target areas (bounds) to specific directories
+within a chosen working directory. ``alsa`` will link the images to associated
+traces and areas using the filenames. Directory names and structure
+are defined in ``alsa/crack_train.py``.
+
+Training data:
+
+-  Images for training: ``Training/Images/Originals``
+-  Traces for training: ``Training/Shapefiles/Labels``
+-  Areas for training: ``Training/Shapefiles/Areas``
+
+Validation data:
+
+-  Images for validation: ``Validation/Images/Originals``
+-  Traces for validation: ``Validation/Shapefiles/Labels``
+-  Areas for validation: ``Validation/Shapefiles/Areas``
+
+Images are linked by taking the stem of the image filename and checking if the
+traces and area filenames contain that stem. E.g. if the image filename is
+``kl5.png``, the stem is ``kl5`` and trace and area filenames must contain that
+stem. E.g. ``kl5_traces.shp`` and ``kl5_area.shp`` will get matched. Be careful
+in naming the files as checks for duplicate pairing is not implemented.
+
 Python
 ~~~~~~
 
@@ -228,34 +255,65 @@ Usage (old & partly deprecated)
 -------------------------------
 
 For both CrackTrain and CrackMain:
--	Extract a .png image of the area to be analyzed
-	-	This image should have black background
-	- 	If this image is used for training, the quality of the image should be same across the images
-	-	If this image is used for prediction, the quality of the image should be around the same as used for the training
-	-	This image needs to be the smallest rectangle that covers the area
-	-	THE NAME OF THIS .PNG IMAGE MUST BE A SUBSTRING OF THE SHAPEFILES
-		-	If the name of the .png image is 'ABC123.png', the shapefiles must have 'ABC123' in their filenames somewhere.
-		-	For this reason, if you have shapefiles named 'abc_1.shp' and 'abc_2.shp', don't name the .png image as 'abc.png' as it can confuse the 2 shapefiles.
--	Install the packages described in the requirements.txt
 
+-	Extract a .png image of the area to be analyzed
+
+	-	This image should have black background
+
+   - 	If this image is used for training, the quality of the image should be
+      same across the images
+
+	-	If this image is used for prediction, the quality of the image should be around
+      the same as used for the training
+
+	-	This image needs to be the smallest rectangle that covers the area
+
+	-	THE NAME OF THIS .PNG IMAGE MUST BE A SUBSTRING OF THE SHAPEFILES
+
+		-	If the name of the .png image is 'ABC123.png', the shapefiles must have 'ABC123' 
+         in their filenames somewhere.
+
+		-	For this reason, if you have shapefiles named 'abc_1.shp' and 'abc_2.shp',
+         don't name the .png image as 'abc.png' as it can confuse the 2 shapefiles.
+
+-	Install the packages described in the requirements.txt
 
 For prediction:
 
--	The program first asks for the .png image's relative or full path (including the .png at the end). Type it in.
--	The program then asks for the path to the .shp-file containing the polygon of the area to be analyzed.
--	The program then asks for the path to the .hdf5-file containing the weights of the CNN-model. By default, this is named 'unet-weights.hdf5'. If not found, try to train model first.
+-	The program first asks for the .png image's relative or full path
+   (including the .png at the end). Type it in.
+
+-	The program then asks for the path to the .shp-file containing the polygon of the
+   area to be analyzed.
+
+-	The program then asks for the path to the .hdf5-file containing the weights
+   of the CNN-model. By default, this is named 'unet-weights.hdf5'.
+   If not found, try to train model first.
+
 -	Finally the program asks for the name of the .shp-file to be produced.
 
 For training:
 
--	The CrackTrain looks for Training folder and contents within it. If this is missing, run the module once and it creates them.
+-	The CrackTrain looks for Training folder and contents within it.
+   If this is missing, run the module once and it creates them.
+
 -	Navigate to Training\Shapefiles
-	-	\Areas should contain the .shp files containing the polygon of the area to be analyzed.
-	-	\Labels should contain the .shp files containing the lines you wish the program detects.
+
+	-	\Areas should contain the .shp files containing the polygon of the area
+      to be analyzed.
+
+	-	\Labels should contain the .shp files containing the lines you wish
+      the program detects.
+
 -	Navigate to Training\Images\Originals
+
 	-	Place the .png images you wish to train for in here.
--	THE FOLDER Training\Images\Generated IS CLEARED AT THE START OF THE PROGRAM! DO NOT STORE ANYTHING HERE!
--	Running the CrackTrain module will create/overwrite a file named 'unet_weights.hdf5'. This is the file that's to be used when predicting.
+
+-	THE FOLDER Training\Images\Generated IS CLEARED AT THE START OF THE PROGRAM!
+   DO NOT STORE ANYTHING HERE!
+
+-	Running the CrackTrain module will create/overwrite a file named
+   'unet_weights.hdf5'. This is the file that's to be used when predicting.
 
 Changes by BC
 -------------
@@ -286,8 +344,8 @@ No major changes, have been trying different parameters for model.compile() usin
 
 Other than these, I am in the process of adding class weights/sample weights to the training step. That's still WIP.
 
-Proposed improvements by Jonne
-------------------------------
+Proposed improvements by Jonne (2020-2021)
+------------------------------------------
 
 -   Create a parametrization for the connecting line which is solely
     used to compare and decide which connector should
@@ -299,3 +357,23 @@ Proposed improvements by Jonne
 -   Parameter optimization
 -   Improve parametrization functions to better emphasize on finding
     the correct angle and less on the distance
+
+Proposed improvements by Nikolas (2022)
+---------------------------------------
+
+-  Refactor the training and validation directory setup
+   so that filepaths to both can be passed in a config file
+   rather than explicitly putting them in set directories which
+   is cumbersome.
+
+-  Refactor ``CrackNetWork`` code as it is slow and complicated.
+   However, it works, so it might not be a priority.
+
+-  Find alternatives to ``ridge-detection`` or create a fork
+   of that project and modify the source code to fit best coding
+   practices.
+
+-  Make the code installable as a ``Python`` package. This is
+   easy when installing with ``pip`` (or ``poetry``) but less
+   so when using ``conda``. Dependency specification in ``pyproject.toml``
+   must match ``conda`` environment.
