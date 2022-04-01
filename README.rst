@@ -1,6 +1,52 @@
 ALSA - Automatic Fracture Trace Extraction
 ==========================================
 
+Installation
+------------
+
+conda
+~~~~~
+
+Recommended method for ``Windows``.
+
+.. code:: bash
+
+   # Create environment
+   conda env create -n alsa -f environment.yml
+
+   # Activate environment
+   conda activate alsa
+
+   # Start an IDE within environment in current folder
+   # E.g. Visual Studio Code
+   code .
+
+   # Or test the command-line interface
+   python -m alsa --help
+
+Python (poetry)
+~~~~~~~~~~~~~~~
+
+Poetry is a  package manager for Python. It uses the ``pyproject.toml`` and
+``poetry.lock`` files to recreate a Python environment. If ``poetry.lock`` is
+missing it uses the dependency specification of ``pyproject.toml`` to create
+it. Otherwise it uses ``poetry.lock`` to exactly recreate the environment.
+
+The installation with ``poetry`` likely only works on ``linux``-systems.
+
+.. code:: bash
+   
+   # Need to have poetry installed on system
+   # Install environment with dependencies
+   poetry install
+
+   # Run command within environment
+   # E.g. to test command-line interface
+   poetry run python -m alsa
+
+   # Enter a shell with the environment
+   poetry shell
+
 Usage
 -----
 
