@@ -284,8 +284,8 @@ By default this configuration is looked for in
 ``<work_dir>/ridge_config.json``. If it is missing the default
 configuration (``DEFAULT_RIDGE_CONFIG``) is used without overrides.
 
-Usage (old & partly deprecated)
--------------------------------
+Old Usage Guide (old & partly deprecated)
+-----------------------------------------
 
 For both CrackTrain and CrackMain:
 
@@ -348,46 +348,21 @@ For training:
 -  Running the CrackTrain module will create/overwrite a file named
    'unet_weights.hdf5'. This is the file that's to be used when predicting.
 
-Changes by BC
--------------
-
-General changes
-in the relevant files I changed 
-“from keras._____ import ____” to “from tensorflow.keras.___ import ____”
-example 
-from tensorflow.keras.models import *
-#instead of: from keras.models import *
-This may not be needed, just depends on how keras is installed. 
-
-Specific Changes
-
-CrackTrain_BC.py
-L89 – L145: Reading validation images, etc.
-L165-L167: Validation data generator
-L170: monitoring validation loss instead of training loss
-L173: changed model.fit_generator to model.fit 
-L180 – L208: Saving training history file, and basic plot of the loss and accuracy scores
-L225 – L233: Added paths for validation data
-
-CrackMain_BC.py
-L93 – L96: added paths to files, instead of prompts; hence code at L98-L141 is deactivated.
-
-Model_BC.py
-No major changes, have been trying different parameters for model.compile() using different accuracy metrics, etc.
-
-Other than these, I am in the process of adding class weights/sample weights to the training step. That's still WIP.
-
 Proposed improvements by Jonne (2020-2021)
 ------------------------------------------
 
 -   Create a parametrization for the connecting line which is solely
     used to compare and decide which connector should
     be in the CrackNetWork.connect
+
 -   Create a method for eliminating the case where a line segment
     crosses another one more than once.
+
 -   Specify in CrackNetWork.connect when to use exact angle
     difference calculations
+
 -   Parameter optimization
+
 -   Improve parametrization functions to better emphasize on finding
     the correct angle and less on the distance
 
