@@ -34,12 +34,13 @@
         in pkgs.writeScriptBin "poetry" ''
           CLIB="${pkgs.stdenv.cc.cc.lib}/lib"
           ZLIB="${pkgs.zlib}/lib"
+          EXPATLIB="${pkgs.expat}/lib"
           CERT="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
 
           export GIT_SSL_CAINFO=$CERT
           export SSL_CERT_FILE=$CERT
           export CURL_CA_BUNDLE=$CERT
-          export LD_LIBRARY_PATH=$CLIB:$ZLIB
+          export LD_LIBRARY_PATH=$CLIB:$ZLIB:$EXPATLIB
 
           export PYTHONPATH=${site-packages}
           export PATH=${interpreters}:$PATH
@@ -55,13 +56,7 @@
         in pkgs.mkShell {
           # The development environment can contain any tools from nixpkgs
           # alongside poetry Here we add e.g. pre-commit and pandoc
-          packages = with pkgs; [
-            pre-commit
-            pandoc
-            poetry-wrapped
-            dos2unix
-            expat
-          ];
+          packages = with pkgs; [ pre-commit pandoc poetry-wrapped dos2unix ];
 
           envrc_contents = ''
             use flake
