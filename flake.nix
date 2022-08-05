@@ -8,70 +8,95 @@
 
   outputs = { nixpkgs, flake-utils, ... }:
     let
+      # Create function to generate the poetry-included shell with single
+      # input: pkgs
+      poetry-wrapped-generate = pkgs:
+        let
+          inherit (pkgs) lib;
+          # The wanted python interpreters are set here. E.g. if you want to
+          # add Python 3.7, add 'python37'.
+          pythons = with pkgs; [ python39 ];
+
+          # The paths to site-packages are extracted and joined with a colon
+          site-packages = lib.concatStringsSep ":"
+            (lib.forEach pythons (python: "${python}/${python.sitePackages}"));
+
+          # The paths to interpreters are extracted and joined with a colon
+          interpreters = lib.concatStringsSep ":"
+            (lib.forEach pythons (python: "${python}/bin"));
+
+          # Create a script with the filename poetry so that all "poetry"
+          # prefixed commands run the same. E.g. you can use 'poetry run'
+          # normally. The script sets environment variables before passing
+          # all arguments to the poetry executable These environment
+          # variables are required for building Python packages with e.g. C
+          # -extensions.
+        in pkgs.writeScriptBin "poetry" ''
+          CLIB="${pkgs.stdenv.cc.cc.lib}/lib"
+          ZLIB="${pkgs.zlib}/lib"
+          CERT="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+
+          export GIT_SSL_CAINFO=$CERT
+          export SSL_CERT_FILE=$CERT
+          export CURL_CA_BUNDLE=$CERT
+          export LD_LIBRARY_PATH=$CLIB:$ZLIB
+
+          export PYTHONPATH=${site-packages}
+          export PATH=${interpreters}:$PATH
+          ${pkgs.execline}/bin/exec -a "$0" "${pkgs.poetry}/bin/poetry" "$@"
+        '';
+      # Define the actual development shell that contains the now wrapped
+      # poetry executable 'poetry-wrapped'
       mkshell = pkgs:
-        with pkgs;
-        mkShell rec {
-          buildInputs = [
-            poetry
-            python39
+        let
+          # Pass pkgs input to poetry-wrapped-generate function which then
+          # returns the poetry-wrapped package.
+          poetry-wrapped = poetry-wrapped-generate pkgs;
+        in pkgs.mkShell {
+          # The development environment can contain any tools from nixpkgs
+          # alongside poetry Here we add e.g. pre-commit and pandoc
+          packages = with pkgs; [
             pre-commit
             pandoc
-            git
-            cacert
-            stdenv
-            pastel
-            zlib
-            nixFlakes
+            poetry-wrapped
             dos2unix
             expat
-            # cudnn_8_3_cudatoolkit_11_5
           ];
-
-          # Required for building C extensions
-          LD_LIBRARY_PATH =
-            # "${stdenv.cc.cc.lib}/lib:${zlib}/lib:${expat}/lib:${cudnn_8_3_cudatoolkit_11_5.cudatoolkit.lib}/lib";
-            "${stdenv.cc.cc.lib}/lib:${zlib}/lib:${expat}/lib";
-          # Certificates for secure connections for e.g. pip downloads
-          GIT_SSL_CAINFO = "${cacert}/etc/ssl/certs/ca-bundle.crt";
-          SSL_CERT_FILE = "${cacert}/etc/ssl/certs/ca-bundle.crt";
-          CURL_CA_BUNDLE = "${cacert}/etc/ssl/certs/ca-bundle.crt";
-          # Required to fully use the python environments
-          PYTHON39PATH = "${python39}/lib/python3.9/site-packages";
-          # PYTHONPATH is overridden with contents from e.g. poetry */site-package.
-          # We do not want them to be in PYTHONPATH.
-          # Therefore, in ./.envrc PYTHONPATH is set to the _PYTHONPATH defined below
-          # and also in shellHooks (direnv does not load shellHook exports, always).
-          _PYTHONPATH = "${PYTHON39PATH}";
 
           envrc_contents = ''
             use flake
-            export PYTHONPATH=$_PYTHONPATH
           '';
 
+          # Define a shellHook that is called every time that development shell
+          # is entered. It installs pre-commit hooks and prints a message about
+          # how to install python dependencies with poetry. Lastly, it
+          # generates an '.envrc' file for use with 'direnv' which I recommend
+          # using for easy usage of the development shell
           shellHook = ''
             [[ -a .pre-commit-config.yaml ]] && \
               echo "Installing pre-commit hooks"; pre-commit install
-            pastel paint -n green "
+            ${pkgs.pastel}/bin/pastel paint -n green "
             Run poetry install to install environment from poetry.lock
             "
-            export PYTHONPATH=$_PYTHONPATH
             [[ ! -a .envrc ]] && echo -n "$envrc_contents" > .envrc
           '';
         };
-    in (flake-utils.lib.eachDefaultSystem (system:
-      let
-        unfree_nixpkgs = import nixpkgs {
-          config = { allowUnfree = true; };
-          inherit system;
+      # Use flake-utils to declare the development shell for each system nix
+      # supports e.g. x86_64-linux and x86_64-darwin (but no guarantees are
+      # given that it works except for x86_64-linux, which I use).
+    in flake-utils.lib.eachDefaultSystem (system:
+      let pkgs = nixpkgs.legacyPackages."${system}";
+      in {
+        devShells.default = mkshell pkgs;
+        checks = {
+          test-poetry-wrapped =
+            let poetry-wrapped = poetry-wrapped-generate pkgs;
+            in pkgs.runCommand "test-poetry-wrapped" { } ''
+              ${poetry-wrapped}/bin/poetry --help
+              ${poetry-wrapped}/bin/poetry init -n
+              ${poetry-wrapped}/bin/poetry check
+              mkdir $out
+            '';
         };
-        # pkgs = unfree_nixpkgs.legacyPackages."${system}";
-        # # Helper function to set allowUnfree for nixpkgs
-        # setup_pkgs = { pkgs }:
-        # import pkgs {
-        # inherit system;
-        # config = { allowUnfree = true; };
-        # };
-        # pkgs_unfree = setup_pkgs { inherit pkgs; };
-
-      in { devShell = mkshell unfree_nixpkgs; }));
+      });
 }
