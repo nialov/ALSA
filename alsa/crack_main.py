@@ -56,7 +56,6 @@ def crack_main(
     verbose: bool = True,
     driver: str = "ESRI Shapefile",
 ):
-
     # Resolve overrides to ridge-detection
     if isinstance(override_ridge_config, Path) or override_ridge_config is None:
         override_ridge_config = resolve_ridge_config_overrides(
@@ -126,7 +125,6 @@ def crack_main(
     report_indexes = set(range(0, 5 * quarter, quarter))
 
     for i in range(n_mats):
-
         if i in report_indexes and verbose:
             progress = i / n_mats
             print(f"Progress at {math.ceil(progress * 100)} %")
@@ -135,7 +133,6 @@ def crack_main(
         nwork = None
 
         if i not in redundant_id_list:
-
             # Not too homogeneous based on earlier examination
             # (not in redundant_id_list)
             im_path = predictions_dir / f"{i}_predict.png"

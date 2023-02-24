@@ -259,7 +259,6 @@ class Crack:
         if len(out_of_bounds) == 0:
             pass
         else:
-
             x_d = 1
             y_d = self.slope
 
@@ -305,7 +304,6 @@ class Crack:
 
     # returns the angle between two cracks
     def angle_difference(self, other, exact=False):
-
         to_return = abs(self.angle - other.angle)
         if to_return > np.pi / 2:
             to_return = np.pi - to_return
@@ -418,7 +416,6 @@ class Crack:
 
     # returns true if line overlaps with other, false otherwise
     def overlaps_with(self, other):
-
         k1 = self.slope
         k2 = other.slope
 
@@ -429,18 +426,15 @@ class Crack:
         if isclose(k1, k2, abs_tol=10**-3) or (k1 >= 1e3 and k2 >= 1e3):
             to_return = isclose(c1, c2, abs_tol=1e-4)
         elif k1 >= 1e3 and k2 < 1e3:
-
             # calculate the crossing point
             y = k2 * self.position[0] + c2
             x = self.position[0]
 
         elif k1 < 1e3 and k2 >= 1e3:
-
             y = k1 * other.position[0] + c1
             x = other.position[0]
 
         else:
-
             x = (c2 - c1) / (k1 - k2)
             y = k1 * x + c1
 
@@ -451,7 +445,6 @@ class Crack:
         return to_return
 
     def is_close(self, other, max_d=2):
-
         d0 = crack_eukl(self.end_points[0], other.end_points[0])
         d1 = crack_eukl(self.end_points[1], other.end_points[1])
 
@@ -463,7 +456,6 @@ class Crack:
     # returns an extrapolated version of self which is extrapolated until it meets other
     # if not possible, returns None
     def extrapolate_to(self, other):
-
         k1 = self.slope
         k2 = other.slope
 
@@ -633,14 +625,12 @@ class CrackNetWork:
         return self
 
     def move_by(self, amount):
-
         for line_s in self.line_segments:
             for line in line_s:
                 line.move_by(amount)
         return self
 
     def fit_to_mat(self, dims):
-
         for line_s in self.line_segments:
             for line in line_s:
                 line.fit_to_mat(dims)
@@ -648,7 +638,6 @@ class CrackNetWork:
 
     def as_col_img(self, background=None):
         def col_generator(n_lines, n_colours=9):
-
             for i in range(n_lines):
                 j = i % n_colours
                 if j < n_colours / 3:
@@ -667,7 +656,6 @@ class CrackNetWork:
                 yield (r, g, b)
 
         def highlight(p, nw, o, col):
-
             cl_img = np.zeros((o.shape[0], o.shape[1], 3))
 
             for ls, cl in zip(nw.line_segments, col(len(nw.line_segments))):
@@ -676,7 +664,6 @@ class CrackNetWork:
                 (min_x, min_y), (max_x, max_y) = Crack.bounds(ls)
                 for row in range(min_y, max_y + 1):
                     for col in range(min_x, max_x + 1):
-
                         if (
                             cl_img[row, col, 0] == 0
                             and cl_img[row, col, 1] == 0
@@ -723,7 +710,6 @@ class CrackNetWork:
 
     # attempts to connect the cracks within each segment so that one crack ends where the next one starts
     def connect_segments(self):
-
         for i, line_s in enumerate(self.line_segments):
             for j, line1 in enumerate(line_s):
                 if j == len(line_s) - 1:
@@ -760,7 +746,6 @@ class CrackNetWork:
     # attempts to break down segments by making each crack in them be a continuation of the
     # previous one, removing loops and branches
     def separate_segments(self):
-
         new_segments = list()
         for line_s in self.line_segments:
             if len(line_s) == 1 and not (line_s[0].length < 1):
@@ -830,13 +815,11 @@ class CrackNetWork:
         return self
 
     def loop_through_lines(self):
-
         for line_s in self.line_segments:
             for line in line_s:
                 yield line
 
     def as_binmat(self, dims):
-
         mat_list = list()
 
         for line_s in self.line_segments:
@@ -846,18 +829,15 @@ class CrackNetWork:
         return ip.img_binary_union(mat_list)
 
     def remove_duplicates(self):
-
         seg_pop_list = list()
         line_pop_list = list()
         duplicate_list = list()
         for i, line_s in enumerate(self.line_segments):
             for k, line in enumerate(line_s):
-
                 for j, line_s2 in enumerate(self.line_segments):
                     if j < i:
                         continue
                     for l, line2 in enumerate(line_s2):
-
                         if i == j and k == l:
                             continue
                         if line == line2:
@@ -894,7 +874,6 @@ class CrackNetWork:
 
     # attempts to connect lines within segments to each other
     def connect_line_segments(self, best_line_data):
-
         line_s1 = self[best_line_data[1]]
         line_s2 = self[best_line_data[2]]
 
@@ -1253,7 +1232,6 @@ class CrackNetWork:
             end_point_list.append(line_seg[0].end_points[1])
             id_list.append(0)
         else:
-
             for i, line in enumerate(line_seg):
                 ep0_conn = False
                 ep1_conn = False
@@ -1265,7 +1243,6 @@ class CrackNetWork:
                             end_point_list.append(ep1)
                         for ep2 in o_line.end_points:
                             if ep1[0] == ep2[0] and ep1[1] == ep2[1]:
-
                                 if ep1 not in cp_list:
                                     cp_list.append(ep1)
                                 if k == 0:
@@ -1281,11 +1258,9 @@ class CrackNetWork:
         return end_point_list, id_list
 
     def v_nodes(self, dims, th=4, ext_l=10):
-
         v_list = list()
         # create a list of end_points and ids for every segment pair
         for i, line_s1 in enumerate(self.line_segments):
-
             end_points1, id_list1 = CrackNetWork.calculate_end_points(line_s1)
 
             seg1_len = sum([l.length for l in line_s1])
@@ -1390,7 +1365,6 @@ class CrackNetWork:
         )
 
         for line_s in self.line_segments:
-
             conn_list = list()
             add_seg_lists = list()
 

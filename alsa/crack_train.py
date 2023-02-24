@@ -73,12 +73,10 @@ def match_images_to_labels_and_bounds(
 
     # Iterate over each image path
     for image in images:
-
         # Iterate over each traces path
         for label in trace_labels:
             # Iterate over each area path
             for bound in bounds:
-
                 # Condition is as follows:
                 # image name (stem) must be a subset of the names of traces and area
                 if image.stem in label.name and image.stem in bound.name:
@@ -97,7 +95,6 @@ def preprocess_images(
     Preprocess training or validation images.
     """
     for ind, (img, geo_file, geo_bounds) in enumerate(training_list):
-
         # Open image
         img = ip.open_image(img)
 
@@ -136,8 +133,7 @@ def preprocess_images(
 
         # Save images with a running suffix
         suf = 1
-        for (im, b) in zip(sub_imgs, sub_bin_imgs):
-
+        for im, b in zip(sub_imgs, sub_bin_imgs):
             # Skip images that are too homogeneous (probably no traces)
             if np.quantile(im, 0.95) == 0 or np.quantile(im, 0.05) == 255:
                 continue
@@ -251,7 +247,6 @@ def collect_targets(work_dir: Path, spatial_file_extension: str = "shp"):
         (shp_bounds_dir, val_bound_dir),
         ("training", "validation"),
     ):
-
         images = list(img_dir.glob("*.png")) if img_dir.exists() else []
         trace_labels = (
             list(shp_dir.glob(f"*.{spatial_file_extension}"))

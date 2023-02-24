@@ -157,7 +157,6 @@ def resolve_ridge_config(img_path: str, override_ridge_config: dict) -> dict:
 def ridge(
     img_path, saved_img_dir, override_ridge_config: dict, save_on_file: bool = False
 ):
-
     ridge_config = resolve_ridge_config(
         img_path=img_path, override_ridge_config=override_ridge_config
     )
@@ -274,7 +273,6 @@ def calculate_ridge_points(line_o, max_length=80):
     # attempts to form a line segment and return the index of the
     # coordinate in the line which should be chosen
     def ridge_segmentation(angle_list, line_o, n_points, orig_size, start=0):
-
         mid_p = int((len(angle_list)) / 2)
         angle1 = angle_list[:mid_p]
         angle2 = angle_list[mid_p:]
@@ -444,7 +442,6 @@ def connect_lines(ridge_fit_coords, eps=3, shape=(256, 256)):
 
     def combine_lines(edge_points, line_list, eps):
         def compare_coords(crds1, crds2, eps):
-
             satisfied = True
 
             for c1, c2 in zip(crds1, crds2):

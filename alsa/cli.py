@@ -51,7 +51,6 @@ def report_target_lists(work_dir: Path):
     for target_list, name in zip(
         (training_list, validation_list), ("Training", "Validation")
     ):
-
         # Convert to json for more human-readable printing
         list_json = json.dumps(target_list, indent=1, cls=PathEncoder)
         typer.echo(f"{name} data pairs: {list_json}")
