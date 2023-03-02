@@ -15,7 +15,7 @@ TRACES_DIR_NAME = Path(TRACES_ZIP_NAME).stem
 TRACES_DIR_TRACES = "data-exported-ESRI-Shapefile/loviisa/traces/20m/"
 TRACES_DIR_AREAS = "data-exported-ESRI-Shapefile/loviisa/area/20m/"
 
-IMAGES_URL = "https://zenodo.org/record/7077519/files/Loviisa_orthomosaics_for_automation.zip?download=1"
+IMAGES_URL = "https://zenodo.org/record/7688530/files/Loviisa_orthomosaics_for_automation.zip?download=1"
 IMAGES_ZIP_NAME = "Loviisa_orthomosaics_for_automation.zip"
 IMAGES_DIR_NAME = Path(IMAGES_ZIP_NAME).stem
 
@@ -50,56 +50,56 @@ TRACE_AREA_IMAGE_DATA_PAIRS = [
         name="kb11",
         traces="KB11_tulkinta.shp",
         area="kb11_area.shp",
-        image="KB11_orto.tif",
+        image="KB11.png",
         data_type=DataType.VALIDATION,
     ),
     Data(
         name="kb2",
         traces="KB2_tulkinta_clip.shp",
         area="kb2_area.shp",
-        image="KB2_orto.tif",
+        image="KB2.png",
         data_type=DataType.TRAINING,
     ),
     Data(
         name="kb3",
         traces="KB3_tulkinta_Bc_edits_clip.shp",
         area="kb3_area.shp",
-        image="KB3_orto.tif",
+        image="KB3.png",
         data_type=DataType.TRAINING,
     ),
     Data(
         name="kb7",
         traces="KB7_tulkinta.shp",
         area="kb7_area.shp",
-        image="KB7_orto.tif",
+        image="KB7.png",
         data_type=DataType.TRAINING,
     ),
     Data(
         name="kb9",
         traces="KB9_tulkinta_clip1.shp",
         area="kb9_area.shp",
-        image="KB9_orto.tif",
+        image="KB9.png",
         data_type=DataType.VALIDATION,
     ),
     Data(
         name="kl2_1",
         traces="KL2_1_tulkinta_clip.shp",
         area="kl2_1_area.shp",
-        image="KL2_orto.tif",
+        image="KL2_1.png",
         data_type=DataType.TRAINING,
     ),
     Data(
         name="kl5",
         traces="KL5_tulkinta.shp",
         area="kl5_area.shp",
-        image="KL5_orto.tif",
+        image="KL5.png",
         data_type=DataType.TRAINING,
     ),
     Data(
         name="og1",
         traces="OG1_tulkinta.shp",
         area="og1_area.shp",
-        image="OG1_Orthomosaic_jpegcompression.tif",
+        image="OG1.png",
         data_type=DataType.PREDICTION,
     ),
 ]
@@ -196,7 +196,7 @@ def _load_orthomosaics(reproduction_dir_path: Path):
         else:
             raise ValueError(f"Expected DataType enum type.")
 
-        src_image_path = images_dir_path / data.image
+        src_image_path = images_dir_path / "pngs" / data.image
         out_image_path.mkdir(exist_ok=True, parents=True)
         dst_image_stem = src_image_path.stem[0:3].lower()
         dst_image_name = f"{dst_image_stem}{src_image_path.suffix}"
