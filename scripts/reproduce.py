@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
+import argparse
 import shutil
 import subprocess
-import sys
 from enum import Enum, unique
 from pathlib import Path
-from typing import Literal, NamedTuple
+from typing import NamedTuple
 
 DOWNLOADS_DIR_NAME = "downloads"
 
@@ -18,6 +18,10 @@ TRACES_DIR_AREAS = "data-exported-ESRI-Shapefile/loviisa/area/20m/"
 IMAGES_URL = "https://zenodo.org/record/7688530/files/Loviisa_orthomosaics_for_automation.zip?download=1"
 IMAGES_ZIP_NAME = "Loviisa_orthomosaics_for_automation.zip"
 IMAGES_DIR_NAME = Path(IMAGES_ZIP_NAME).stem
+
+MODEL_URL = (
+    "https://zenodo.org/record/7077620/files/unet_weights_2022_a.hdf5?download=1"
+)
 
 # From alsa/crack_train.py
 TRAINING_IMAGES = Path("Training/Images/Originals")
@@ -207,11 +211,52 @@ def _load_orthomosaics(reproduction_dir_path: Path):
         src_image_path.unlink(missing_ok=True)
 
 
-def main(reproduction_dir_path: Path):
-    _load_traces(reproduction_dir_path=reproduction_dir_path)
-    _load_orthomosaics(reproduction_dir_path=reproduction_dir_path)
+def _load_model(reproduction_dir_path: Path):
+    model_output_path = reproduction_dir_path / "unet_weights_2022_a.hdf5"
+    subprocess.check_call(
+        ["wget", "--continue", MODEL_URL, f"--output-document={model_output_path}"]
+    )
+
+
+def main():
+    """
+    Reproduce the data for training, validation and prediction phases.
+
+    All options default to `True` i.e. all data is downloaded if no options are
+    given.
+    """
+    parser = argparse.ArgumentParser(
+        description="Reproduce the data for training, validation and prediction phases."
+    )
+    parser.add_argument(
+        "--load-traces", action="store_true", help="Load traces", default=True
+    )
+    parser.add_argument("--no-load-traces", action="store_false", dest="load_traces")
+    parser.add_argument(
+        "--load-orthomosaics",
+        action="store_true",
+        help="Load orthomosaics",
+        default=True,
+    )
+    parser.add_argument(
+        "--no-load-orthomosaics", action="store_false", dest="load_orthomosaics"
+    )
+    parser.add_argument(
+        "--load-model", action="store_true", help="Load model", default=True
+    )
+    parser.add_argument("--no-load-model", action="store_false", dest="load_model")
+    parser.add_argument(
+        "reproduction_dir_path", type=str, help="Path to the reproduction directory"
+    )
+
+    args = parser.parse_args()
+    if args.load_traces:
+        _load_traces(reproduction_dir_path=Path(args.reproduction_dir_path))
+    if args.load_orthomosaics:
+        _load_orthomosaics(reproduction_dir_path=Path(args.reproduction_dir_path))
+    if args.load_model:
+        _load_model(reproduction_dir_path=Path(args.reproduction_dir_path))
 
 
 if __name__ == "__main__":
-    reproduction_dir_path = Path(sys.argv[1])
-    main(reproduction_dir_path=reproduction_dir_path)
+    main()
