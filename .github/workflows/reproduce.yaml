@@ -1,0 +1,30 @@
+on:
+  # run on all pushes to any branch
+  push:
+    paths:
+      # Only run on changes to reproduce script
+      - "scripts/reproduce.py"
+
+jobs:
+  reproduce:
+    name: Test data reproduction
+    strategy:
+      matrix:
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Test reproduction script entrypoint
+        run: |
+          scripts/reproduce.py --help
+      - name: Download trace and model data
+        run: |
+          scripts/reproduce.py --no-load-orthomosaics reproduction/
+      - name: Upload reproduced data directory
+        uses: actions/upload-artifact@v3
+        with:
+          name: alsa-data-reproduction
+          path: reproduction/
