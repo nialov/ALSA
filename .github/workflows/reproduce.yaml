@@ -19,10 +19,10 @@ jobs:
       - uses: actions/checkout@v2
       - name: Test reproduction script entrypoint
         run: |
-          scripts/reproduce.py --help
+          python3 scripts/reproduce.py --help
       - name: Download trace and model data
         run: |
-          scripts/reproduce.py --no-load-orthomosaics reproduction/
+          python3 scripts/reproduce.py --no-load-orthomosaics reproduction/
       - name: Upload reproduced data directory
         uses: actions/upload-artifact@v3
         with:
