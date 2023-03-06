@@ -4,6 +4,7 @@ on:
     paths:
       # Only run on changes to reproduce script
       - "scripts/reproduce.py"
+      - ".github/workflows/reproduce.yaml"
 
 jobs:
   reproduce:
