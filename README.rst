@@ -47,6 +47,33 @@ The installation with ``poetry`` likely only works on ``linux``-systems.
    # Enter a shell with the environment
    poetry shell
 
+Reproduction of manucript results
+---------------------------------
+
+To reproduce the data structure for the manucript, *Automated mapping of
+bedrock-fracture traces from UAV-acquired images using U-NET
+convolutional neural networks*, use the ``scripts/reproduce.py`` script
+to download and organize trace, area, orthomosaic and model data. The
+script requires a Linux environment.
+
+To list options:
+
+.. code:: bash
+
+   python3 scripts/reproduce.py --help
+   
+To download all data to a new ``./reproduction`` directory:
+
+.. code:: bash
+
+   python3 scripts/reproduce.py reproduction/
+
+After running the script, the output directory can be used as the
+working directory that is passed to the ``alsa`` command-line entrypoint
+to train a new model, or use the included already trained unet model to
+generate trace predictions from existing or new image data. See
+`below <#command-line>`__ for guidance on the ``alsa`` command-line.
+
 Usage
 -----
 
