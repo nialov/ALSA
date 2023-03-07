@@ -202,6 +202,7 @@ def _load_orthomosaics(reproduction_dir_path: Path):
 
         src_image_path = images_dir_path / "pngs" / data.image
         out_image_path.mkdir(exist_ok=True, parents=True)
+        # FIXME: Need to handle original filenames correctly...
         dst_image_stem = src_image_path.stem[0:3].lower()
         dst_image_name = f"{dst_image_stem}{src_image_path.suffix}"
         dst = out_image_path / dst_image_name
