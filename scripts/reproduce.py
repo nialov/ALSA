@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import re
 import shutil
 import subprocess
 from enum import Enum, unique
@@ -27,11 +28,14 @@ MODEL_URL = (
 TRAINING_IMAGES = Path("Training/Images/Originals")
 TRAINING_AREAS = Path("Training/Shapefiles/Areas")
 TRAINING_TRACES = Path("Training/Shapefiles/Labels")
+
 VALIDATION_IMAGES = Path("Validation/Images/Originals")
 VALIDATION_AREAS = Path("Validation/Shapefiles/Areas")
 VALIDATION_TRACES = Path("Validation/Shapefiles/Labels")
 
 PREDICTION_IMAGES = Path("prediction/Images")
+PREDICTION_AREAS = Path("prediction/Shapefiles/Areas")
+PREDICTION_TRACES = Path("prediction/Shapefiles/Labels")
 
 
 @unique
@@ -130,30 +134,32 @@ def _load_traces(reproduction_dir_path: Path):
     out_validation_traces_path, out_validation_area_path = [
         reproduction_dir_path / path for path in (VALIDATION_TRACES, VALIDATION_AREAS)
     ]
+    out_prediction_traces_path, out_prediction_area_path = [
+        reproduction_dir_path / path for path in (PREDICTION_TRACES, PREDICTION_AREAS)
+    ]
 
     for path in (
         out_training_traces_path,
         out_training_area_path,
         out_validation_traces_path,
         out_validation_area_path,
+        out_prediction_traces_path,
+        out_prediction_area_path,
     ):
         path.mkdir(parents=True, exist_ok=True)
 
     for data in TRACE_AREA_IMAGE_DATA_PAIRS:
-        if data.data_type is DataType.PREDICTION:
-            # Skip OG1
-            continue
-
         if data.data_type is DataType.TRAINING:
             out_traces_path = out_training_traces_path
             out_area_path = out_training_area_path
         elif data.data_type is DataType.VALIDATION:
             out_traces_path = out_validation_traces_path
             out_area_path = out_validation_area_path
+        elif data.data_type is DataType.PREDICTION:
+            out_traces_path = out_prediction_traces_path
+            out_area_path = out_prediction_area_path
         else:
-            raise ValueError(
-                f"Expected either DataType.TRAINING or DataType.VALIDATION."
-            )
+            raise ValueError(f"Expected one of DataType enum values.")
 
         for attr, src_path, out_path in zip(
             ("traces", "area"),
@@ -202,10 +208,26 @@ def _load_orthomosaics(reproduction_dir_path: Path):
 
         src_image_path = images_dir_path / "pngs" / data.image
         out_image_path.mkdir(exist_ok=True, parents=True)
-        # FIXME: Need to handle original filenames correctly...
-        dst_image_stem = src_image_path.stem[0:3].lower()
+
+        # Match from the start of the image name until the first underscore
+        src_image_path_base_match = re.match(
+            pattern=r"^(\w\w\d+).*", string=src_image_path.stem
+        )
+        assert src_image_path_base_match is not None
+        src_image_path_base = src_image_path_base_match.groups()[0]
+        dst_image_stem = src_image_path_base.lower()
         dst_image_name = f"{dst_image_stem}{src_image_path.suffix}"
         dst = out_image_path / dst_image_name
+
+        # print("Preparing to move image:")
+        # print(
+        #     dict(
+        #         src_image_path=src_image_path,
+        #         src_image_path_base=src_image_path_base,
+        #         dst=dst,
+        #     )
+        # )
+
         if not dst.exists():
             print(f"Moving {src_image_path} to {dst}.")
             shutil.move(src=src_image_path, dst=dst)
