@@ -75,32 +75,44 @@ already trained unet model to generate trace predictions from existing
 or new image data. See below for guidance on the ``alsa`` `Python
 function <#python>`__ and `command-line <#command-line>`__ interfaces.
 
+The reproduction process of training and predicting will take a
+considerable amount of time due to both intensive machine learning and
+vectorization processes. For testing purposes we suggest using very
+limited datasets.
+
 Commands for reproduction from the command-line:
 
-1. Check that reproduction directory contents are valid:
+0. Download all data to a new ``./reproduction`` directory (if not
+   already done):
 
-   .. code:: bash
+.. code:: bash
 
-      python -m alsa check reproduction/
+   python3 scripts/reproduce.py reproduction/
+
+1. Check that ``./reproduction``  directory contents are valid:
+
+.. code:: bash
+
+   python -m alsa check reproduction/
 
 2. Train model
 
-   .. code:: bash
+.. code:: bash
 
-      python -m alsa train reproduction/ \
-          --epochs 100 \
-          --validation-steps 100 \
-          --steps-per-epoch 300
+   python -m alsa train reproduction/ \
+       --epochs 100 \
+       --validation-steps 100 \
+       --steps-per-epoch 300
 
 3. Generate predicted traces using trained model
 
-   .. code:: bash
+.. code:: bash
 
-      python -m alsa predict reproduction/ \
-              --img-path  \
-              --area-file-path reproduction/Validation/Shapefiles/Areas/kb11_area.shp \
-              --unet-weights-path reproduction/unet_weights.hdf5 \
-              --predicted-output-path reproduction/predicted_traces.shp
+   python -m alsa predict reproduction/ \
+           --img-path reproduction/prediction/Images/og1.png \
+           --area-file-path reproduction/prediction/Shapefiles/Areas/og1_area.shp \
+           --unet-weights-path reproduction/unet_weights.hdf5 \
+           --predicted-output-path reproduction/og1_predicted_traces.shp
 
 Usage
 -----
