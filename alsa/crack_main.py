@@ -4,6 +4,7 @@ Main entrypoint for prediction using trained model.
 import json
 import logging
 import math
+from functools import partial
 from pathlib import Path
 from typing import Optional, Union
 
@@ -12,6 +13,7 @@ import numpy as np
 
 import alsa.image_proc as ip
 import alsa.signal_proc as sp
+from alsa import utils
 from alsa.crack_cls import CrackNetWork
 from alsa.data import save_result, testGenerator
 from alsa.model import unet
@@ -56,6 +58,8 @@ def crack_main(
     verbose: bool = True,
     driver: str = "ESRI Shapefile",
 ):
+    print_if_verbose = partial(utils.conditional_print, is_verbose=verbose)
+
     # Resolve overrides to ridge-detection
     if isinstance(override_ridge_config, Path) or override_ridge_config is None:
         override_ridge_config = resolve_ridge_config_overrides(
@@ -64,20 +68,30 @@ def crack_main(
     assert isinstance(override_ridge_config, dict)
 
     # Open image to predict on
-    sub_imgs = ip.open_image(img_path)
+    predict_image = ip.open_image(img_path)
+
+    print_if_verbose(f"Opening image for prediction {img_path}")
 
     # Get dimensions
-    orig_dims = sub_imgs.shape
+    orig_dims = predict_image.shape
+    print_if_verbose(f"Image dimensions: {orig_dims}")
 
     # Read target area and resolve rectangular bounds
     geo_data = gpd.read_file(area_file_path)
     min_x, min_y, max_x, max_y = geo_data.total_bounds
+    print_if_verbose(
+        f"Read target area from {area_file_path}. Bounds: {min_x, min_y, max_x, max_y}."
+    )
 
     # Segment the image to sub-images
-    sub_imgs = ip.img_segmentation(sub_imgs, width=width, height=height)
+    sub_imgs = ip.img_segmentation(predict_image, width=width, height=height)
     n_mats_per_row = int(orig_dims[1] / width) + 1
     n_mats_per_col = int(orig_dims[0] / height) + 1
     n_mats = n_mats_per_row * n_mats_per_col
+    segment_info = dict(
+        n_mats_per_row=n_mats_per_row, n_mats_per_col=n_mats_per_col, n_mats=n_mats
+    )
+    print_if_verbose(f"Segmenting image. {segment_info}")
 
     # Create sub-image and prediction directories in working directory
     sub_imgs_dir = work_dir / SUB_IMGS_PATH
@@ -85,20 +99,32 @@ def crack_main(
     for dir_path in (sub_imgs_dir, predictions_dir):
         dir_path.mkdir(exist_ok=True, parents=True)
 
+    print_if_verbose(
+        f"{dict(sub_imgs_dir=sub_imgs_dir, predictions_dir=predictions_dir)}"
+    )
     redundant_id_list = list()
 
     # Enumerate over the images
-    for i, im in enumerate(sub_imgs):
+    sub_imgs_list = list(sub_imgs)
+    for i, im in enumerate(sub_imgs_list):
         if np.quantile(im, 0.95) == 0 or np.quantile(im, 0.05) == 255:
             # Mark too homogeneous images for skipping in prediction
             redundant_id_list.append(i)
+            logging.warning(f"Image {im} at index {i} is too homogeneous.")
 
         # Save sub-images
         img_path = sub_imgs_dir / f"sub_img_{i}.png"
         ip.save_image(img_path, im)
 
+    # Report or raise an error if homogeneous images are too large a proportion
+    # of all images
+    utils.report_redundant_proportion(
+        redundant_proportion=len(redundant_id_list) / len(sub_imgs_list)
+    )
+
     # Initiate model from given weights
     model = unet(unet_weights_path)
+    print_if_verbose(f"Model loaded from {unet_weights_path}")
 
     # Create image generator
     img_generator = testGenerator(sub_imgs_dir, num_image=n_mats)
@@ -113,21 +139,23 @@ def crack_main(
         n_mats_per_col=n_mats_per_col,
         n_mats_per_row=n_mats_per_row,
     )
+    print_if_verbose(
+        f"Saving prediction images. {dict(predictions_dir=predictions_dir)}"
+    )
 
     # Start post-processing (ridge detection) from the predicted data
     nworks = list()
 
-    if verbose:
-        print("Starting ridge detection from predicted trace data.")
+    print_if_verbose("Starting ridge detection from predicted trace data.")
 
     # Report progress at set intervals (25%, 50%, ...)
     quarter = n_mats // 4
     report_indexes = set(range(0, 5 * quarter, quarter))
 
     for i in range(n_mats):
-        if i in report_indexes and verbose:
+        if i in report_indexes:
             progress = i / n_mats
-            print(f"Progress at {math.ceil(progress * 100)} %")
+            print_if_verbose(f"Progress at {math.ceil(progress * 100)} %")
 
         # Default value
         nwork = None
@@ -154,8 +182,7 @@ def crack_main(
 
         nworks.append(nwork)
 
-    if verbose:
-        print("Starting combination of CrackNetWorks.")
+    print_if_verbose("Starting combination of CrackNetWorks.")
 
     # Combine the networks/traces from each sub-image
     combined_nwork = CrackNetWork.combine_nworks(
@@ -170,8 +197,7 @@ def crack_main(
     # Save to wanted spatial format based on driver (e.g. ESRI Shapefile)
     if not gdf.empty:
         gdf.to_file(predicted_output_path, driver=driver)
-        if verbose:
-            print(f"Saved predicted traces to {predicted_output_path}")
+        print_if_verbose(f"Saved predicted traces to {predicted_output_path}")
     else:
         logging.error(
             "Empty GeoDataFrame from prediction.\n"
