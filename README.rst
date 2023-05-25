@@ -69,10 +69,10 @@ To download all data to a new ``./reproduction`` directory:
    python3 scripts/reproduce.py reproduction/
 
 After running the script, the output directory can be used as the
-working directory that is passed to the ``alsa`` Python functions or
+working directory that is passed to the ``ALSA`` Python functions or
 command-line entrypoint to train a new model, or use the included
 already trained unet model to generate trace predictions from existing
-or new image data. See below for guidance on the ``alsa`` `Python
+or new image data. See below for guidance on the ``ALSA`` `Python
 function <#python>`__ and `command-line <#command-line>`__ interfaces.
 
 The reproduction process of training and predicting will take a
@@ -120,11 +120,16 @@ Usage
 Training and Validation data setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Training and validation data for training are given by putting ``png``-images,
-traces (labels) and target areas (bounds) to specific directories
-within a chosen working directory. ``alsa`` will link the images to associated
-traces and areas using the filenames. Directory names and structure
-are defined in ``alsa/crack_train.py``.
+Training and validation data for training are given by putting 8-bit
+``png``-images, traces (labels) and target areas (bounds) to specific
+directories within a chosen working directory. ``ALSA`` will link the
+images to associated traces and areas using the filenames. Directory
+names and structure are defined in ``alsa/crack_train.py``.
+
+Note that the ``png`` images must be 8-bit. E.g. 16-bit images will not
+work for training or prediction. This is due to the ``PIL`` Python
+library not supporting reading of them in the current version of
+``ALSA``.
 
 Training data:
 
