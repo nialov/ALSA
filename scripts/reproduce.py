@@ -16,7 +16,7 @@ TRACES_DIR_NAME = Path(TRACES_ZIP_NAME).stem
 TRACES_DIR_TRACES = "data-exported-ESRI-Shapefile/loviisa/traces/20m/"
 TRACES_DIR_AREAS = "data-exported-ESRI-Shapefile/loviisa/area/20m/"
 
-IMAGES_URL = "https://zenodo.org/record/7688530/files/Loviisa_orthomosaics_for_automation.zip?download=1"
+IMAGES_URL = "https://zenodo.org/record/7974402/files/Loviisa_orthomosaics_for_automation.zip?download=1"
 IMAGES_ZIP_NAME = "Loviisa_orthomosaics_for_automation.zip"
 IMAGES_DIR_NAME = Path(IMAGES_ZIP_NAME).stem
 
@@ -228,10 +228,10 @@ def _load_orthomosaics(reproduction_dir_path: Path):
         #     )
         # )
 
-        if not dst.exists():
-            print(f"Moving {src_image_path} to {dst}.")
-            shutil.move(src=src_image_path, dst=dst)
-        src_image_path.unlink(missing_ok=True)
+        print(f"Copying {src_image_path} to {dst} and overwriting if necessary.")
+        dst.unlink(missing_ok=True)
+        shutil.copy(src=src_image_path, dst=dst)
+        # src_image_path.unlink(missing_ok=True)
 
 
 def _load_model(reproduction_dir_path: Path):
