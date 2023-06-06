@@ -81,7 +81,6 @@ def crop_image(array, bckgrnd_pxl=0):
 # Plots a given greyscale array or a list of arrays
 def plot_array(array, max_cols=5):
     if isinstance(array, list):
-
         nrow = 1
         # Calculate the no. of rows
         for i in range(1, int(round(np.sqrt(len(array)))) + 1):
@@ -102,7 +101,6 @@ def plot_array(array, max_cols=5):
                 ax.axis("off")
 
         else:
-
             array_list = []
             alist = []
             for row in range(nrow):
@@ -241,7 +239,6 @@ def img_segmentation(img, width=256, height=256, method="fill"):
     col_splits = int(col_splits)
 
     for row in range(row_splits):
-
         next_row = check_next_boundary(rows, height * row, height)
         for col in range(col_splits):
             next_col = check_next_boundary(cols, width * col, width)
@@ -389,7 +386,6 @@ def img_pred_highlight(pred, orig=None, label=None, hl_col=(1, 0, 0)):
         raise Exception("orig and label must not both be None")
 
     def highlight(p, o, col):
-
         cl_img = np.zeros((p.shape[0], p.shape[1], 3))
 
         (cl_red, cl_grn, cl_blue) = col

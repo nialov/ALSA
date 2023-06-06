@@ -136,7 +136,7 @@ def geo_dataframe_to_binmat(
         x_list = line_string.xy[0]
         y_list = line_string.xy[1]
 
-        for (x, y) in zip(x_list, y_list):
+        for x, y in zip(x_list, y_list):
             x = int(convert_x(x))
             y = int(convert_y(y))
             coord_list.append((x, y))

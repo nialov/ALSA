@@ -175,3 +175,5 @@ history.csv
 Training/
 .vscode/
 *.hdf5
+.pre-commit-cache/
+/reproductin/

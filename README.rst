@@ -47,17 +47,89 @@ The installation with ``poetry`` likely only works on ``linux``-systems.
    # Enter a shell with the environment
    poetry shell
 
+Reproduction of manucript results
+---------------------------------
+
+To reproduce the data structure for the manucript, *Automated mapping of
+bedrock-fracture traces from UAV-acquired images using U-NET
+convolutional neural networks*, use the ``scripts/reproduce.py`` script
+to download and organize trace, area, orthomosaic and model data. The
+script requires a Linux environment.
+
+To list options:
+
+.. code:: bash
+
+   python3 scripts/reproduce.py --help
+   
+To download all data to a new ``./reproduction`` directory:
+
+.. code:: bash
+
+   python3 scripts/reproduce.py reproduction/
+
+After running the script, the output directory can be used as the
+working directory that is passed to the ``ALSA`` Python functions or
+command-line entrypoint to train a new model, or use the included
+already trained unet model to generate trace predictions from existing
+or new image data. See below for guidance on the ``ALSA`` `Python
+function <#python>`__ and `command-line <#command-line>`__ interfaces.
+
+The reproduction process of training and predicting will take a
+considerable amount of time due to both intensive machine learning and
+vectorization processes. For testing purposes we suggest using very
+limited datasets.
+
+Commands for reproduction from the command-line:
+
+0. Download all data to a new ``./reproduction`` directory (if not
+   already done):
+
+.. code:: bash
+
+   python3 scripts/reproduce.py reproduction/
+
+1. Check that ``./reproduction``  directory contents are valid:
+
+.. code:: bash
+
+   python -m alsa check reproduction/
+
+2. Train model
+
+.. code:: bash
+
+   python -m alsa train reproduction/ \
+       --epochs 100 \
+       --validation-steps 100 \
+       --steps-per-epoch 300
+
+3. Generate predicted traces using trained model
+
+.. code:: bash
+
+   python -m alsa predict reproduction/ \
+           --img-path reproduction/prediction/Images/og1.png \
+           --area-file-path reproduction/prediction/Shapefiles/Areas/og1_area.shp \
+           --unet-weights-path reproduction/unet_weights.hdf5 \
+           --predicted-output-path reproduction/og1_predicted_traces.shp
+
 Usage
 -----
 
 Training and Validation data setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Training and validation data for training are given by putting ``png``-images,
-traces (labels) and target areas (bounds) to specific directories
-within a chosen working directory. ``alsa`` will link the images to associated
-traces and areas using the filenames. Directory names and structure
-are defined in ``alsa/crack_train.py``.
+Training and validation data for training are given by putting 8-bit
+``png``-images, traces (labels) and target areas (bounds) to specific
+directories within a chosen working directory. ``ALSA`` will link the
+images to associated traces and areas using the filenames. Directory
+names and structure are defined in ``alsa/crack_train.py``.
+
+Note that the ``png`` images must be 8-bit. E.g. 16-bit images will not
+work for training or prediction. This is due to the ``PIL`` Python
+library not supporting reading of them in the current version of
+``ALSA``.
 
 Training data:
 
